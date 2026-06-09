@@ -14,21 +14,21 @@ export class AdherentsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   create(@Body() createAdherentDto: CreateAdherentDto) {
     return this.adherentsService.create(createAdherentDto);
   }
 
   @Get()
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   findAll() {
     return this.adherentsService.findAll();
   }
 
   @Get('export')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   async exportAdherents(@Query('status') status: string, @Res({ passthrough: true }) res: Response) {
     const buffer = await this.adherentsService.generateExport(status);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -43,21 +43,21 @@ export class AdherentsController {
 
   @Get(':id')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   findOne(@Param('id') id: string) {
     return this.adherentsService.findOne(id);
   }
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   update(@Param('id') id: string, @Body() updateAdherentDto: UpdateAdherentDto) {
     return this.adherentsService.update(id, updateAdherentDto);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   remove(@Param('id') id: string) {
     return this.adherentsService.remove(id);
   }

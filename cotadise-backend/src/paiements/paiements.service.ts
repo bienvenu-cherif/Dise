@@ -6,7 +6,9 @@ import { Paiement } from './paiement.entity';
 import { CreatePaiementDto } from './dto/create-paiement.dto';
 import { UpdatePaiementDto } from './dto/update-paiement.dto';
 import { Cotisation } from '../cotisations/cotisation.entity';
+import { DefisService } from '../defis/defis.service';
 import { User } from '../users/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PaiementsService {
@@ -17,6 +19,8 @@ export class PaiementsService {
     private readonly cotisationsRepository: Repository<Cotisation>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly notificationsService: NotificationsService,
+    private readonly defisService: DefisService,
   ) {}
 
   async create(createPaiementDto: CreatePaiementDto): Promise<Paiement> {
@@ -31,36 +35,71 @@ export class PaiementsService {
     if (!user) {
       throw new NotFoundException(`User with id ${createPaiementDto.userId} not found`);
     }
+    const payer = createPaiementDto.payerId
+      ? await this.usersRepository.findOne({ where: { id: createPaiementDto.payerId } })
+      : undefined;
+    if (createPaiementDto.payerId && !payer) {
+      throw new NotFoundException(`Payer with id ${createPaiementDto.payerId} not found`);
+    }
+    const recordedBy = createPaiementDto.recordedById
+      ? await this.usersRepository.findOne({ where: { id: createPaiementDto.recordedById } })
+      : undefined;
+    if (createPaiementDto.recordedById && !recordedBy) {
+      throw new NotFoundException(`Recorder with id ${createPaiementDto.recordedById} not found`);
+    }
     const paiement = this.paiementsRepository.create({
       amount: createPaiementDto.amount,
-      method: createPaiementDto.method,
+      method: createPaiementDto.method ?? (createPaiementDto.origin === 'main_a_main' ? 'Especes' : 'Wave'),
       reference: createPaiementDto.reference,
+      status: createPaiementDto.status ?? 'confirme',
+      origin: createPaiementDto.origin ?? 'paiement_personnel',
+      payerPhone: createPaiementDto.payerPhone ?? payer?.wavePhone ?? user.wavePhone ?? user.phone,
+      note: createPaiementDto.note,
       cotisation,
       user,
+      payer,
+      recordedBy,
     });
 
-    cotisation.paidAmount += createPaiementDto.amount;
-    if (cotisation.paidAmount >= cotisation.amount) {
-      cotisation.paid = true;
-      cotisation.status = 'paid';
-      cotisation.paidAt = new Date();
-    } else {
-      cotisation.status = 'partial';
+    if (paiement.status === 'confirme') {
+      cotisation.paidAmount += createPaiementDto.amount;
+      if (cotisation.paidAmount >= cotisation.amount) {
+        cotisation.paid = true;
+        cotisation.status = 'paid';
+        cotisation.paidAt = new Date();
+      } else {
+        cotisation.status = 'partial';
+      }
+      await this.cotisationsRepository.save(cotisation);
     }
 
-    await this.cotisationsRepository.save(cotisation);
-    return this.paiementsRepository.save(paiement);
+    const savedPaiement = await this.paiementsRepository.save(paiement);
+
+    if (savedPaiement.status === 'confirme') {
+      await this.notificationsService.notifyPaymentConfirmed(savedPaiement);
+      await this.defisService.refreshChallengesForUser(savedPaiement.user.id, savedPaiement.cotisation?.anneeAcademique?.id);
+    }
+
+    return savedPaiement;
   }
 
-  async generateExport(userId?: string): Promise<Buffer> {
+  async generateExport(userId?: string, anneeAcademiqueId?: string, levelId?: string): Promise<Buffer> {
     const query = this.paiementsRepository
       .createQueryBuilder('paiement')
       .leftJoinAndSelect('paiement.user', 'user')
+      .leftJoinAndSelect('user.level', 'level')
       .leftJoinAndSelect('paiement.cotisation', 'cotisation')
+      .leftJoinAndSelect('cotisation.anneeAcademique', 'anneeAcademique')
       .orderBy('paiement.paidAt', 'DESC');
 
     if (userId) {
-      query.where('user.id = :userId', { userId });
+      query.andWhere('user.id = :userId', { userId });
+    }
+    if (anneeAcademiqueId) {
+      query.andWhere('anneeAcademique.id = :anneeAcademiqueId', { anneeAcademiqueId });
+    }
+    if (levelId) {
+      query.andWhere('level.id = :levelId', { levelId });
     }
 
     const paiements = await query.getMany();
@@ -70,9 +109,15 @@ export class PaiementsService {
         'Amount': item.amount,
         'Method': item.method,
         'Reference': item.reference,
+        'Status': item.status,
+        'Origin': item.origin,
+        'Payer Phone': item.payerPhone || '',
         'Paid At': item.paidAt ? item.paidAt.toISOString() : '',
         'User ID': item.user?.id || '',
         'User Email': item.user?.email || '',
+        'Payer ID': item.payer?.id || '',
+        'Payer Email': item.payer?.email || '',
+        'Recorded By ID': item.recordedBy?.id || '',
         'Cotisation ID': item.cotisation?.id || '',
         'Cotisation Title': item.cotisation?.title || '',
         'Cotisation Amount': item.cotisation?.amount || '',
@@ -84,8 +129,23 @@ export class PaiementsService {
     return xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
   }
 
-  findAll(): Promise<Paiement[]> {
-    return this.paiementsRepository.find({ order: { paidAt: 'DESC' } });
+  findAll(filters: { anneeAcademiqueId?: string; levelId?: string } = {}): Promise<Paiement[]> {
+    const query = this.paiementsRepository
+      .createQueryBuilder('paiement')
+      .leftJoinAndSelect('paiement.user', 'user')
+      .leftJoinAndSelect('user.level', 'level')
+      .leftJoinAndSelect('paiement.cotisation', 'cotisation')
+      .leftJoinAndSelect('cotisation.anneeAcademique', 'anneeAcademique')
+      .orderBy('paiement.paidAt', 'DESC');
+
+    if (filters.anneeAcademiqueId) {
+      query.andWhere('anneeAcademique.id = :anneeAcademiqueId', { anneeAcademiqueId: filters.anneeAcademiqueId });
+    }
+    if (filters.levelId) {
+      query.andWhere('level.id = :levelId', { levelId: filters.levelId });
+    }
+
+    return query.getMany();
   }
 
   findForUser(userId: string): Promise<Paiement[]> {

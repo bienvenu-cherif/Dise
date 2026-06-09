@@ -21,12 +21,30 @@ export class CreateUserDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  @Length(6, 20)
+  wavePhone?: string;
+
+  @IsOptional()
   @IsUUID()
   levelId?: string;
 
   @IsOptional()
   @IsIn(['etudiant', 'admin', 'tresorier', 'alumni'])
   role?: string;
+
+  @IsOptional()
+  @IsIn(['invite', 'profil_a_completer', 'actif', 'suspendu'])
+  accountStatus?: string;
+
+  @IsOptional()
+  @IsIn(['import_officiel', 'passage_automatique', 'creation_manuelle'])
+  entrySource?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  promotionSortante?: string;
 
   @IsNotEmpty()
   @IsString()

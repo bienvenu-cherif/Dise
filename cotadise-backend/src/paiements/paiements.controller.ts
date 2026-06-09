@@ -14,17 +14,38 @@ export class PaiementsController {
 
   @Post()
   create(@Req() req: any, @Body() createPaiementDto: CreatePaiementDto) {
-    if (!createPaiementDto.userId || req.user.role !== 'admin') {
+    const isGestionnaire = req.user.role === 'admin' || req.user.role === 'tresorier';
+    if (!createPaiementDto.userId) {
       createPaiementDto.userId = req.user.id;
     }
+    if (!isGestionnaire) {
+      createPaiementDto.payerId = req.user.id;
+      createPaiementDto.origin = createPaiementDto.userId === req.user.id ? 'paiement_personnel' : 'paiement_pour_camarade';
+    }
+    return this.paiementsService.create(createPaiementDto);
+  }
+
+  @Post('main-a-main')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
+  createMainAMain(@Req() req: any, @Body() createPaiementDto: CreatePaiementDto) {
+    createPaiementDto.recordedById = req.user.id;
+    createPaiementDto.origin = 'main_a_main';
+    createPaiementDto.method = createPaiementDto.method || 'Especes';
+    createPaiementDto.status = 'confirme';
     return this.paiementsService.create(createPaiementDto);
   }
 
   @Get('export')
   @UseGuards(RolesGuard)
-  @Roles('admin')
-  async exportAll(@Query('userId') userId: string, @Res({ passthrough: true }) res: Response) {
-    const buffer = await this.paiementsService.generateExport(userId);
+  @Roles('admin', 'tresorier')
+  async exportAll(
+    @Query('userId') userId: string,
+    @Query('anneeId') anneeId: string,
+    @Query('levelId') levelId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const buffer = await this.paiementsService.generateExport(userId, anneeId, levelId);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="paiements${userId ? `-${userId}` : ''}.xlsx"`);
     return buffer;
@@ -32,9 +53,9 @@ export class PaiementsController {
 
   @Get()
   @UseGuards(RolesGuard)
-  @Roles('admin')
-  findAll() {
-    return this.paiementsService.findAll();
+  @Roles('admin', 'tresorier')
+  findAll(@Query('anneeId') anneeId?: string, @Query('levelId') levelId?: string) {
+    return this.paiementsService.findAll({ anneeAcademiqueId: anneeId, levelId });
   }
 
   @Get('me/export')
@@ -52,21 +73,21 @@ export class PaiementsController {
 
   @Get(':id')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   findOne(@Param('id') id: string) {
     return this.paiementsService.findOne(id);
   }
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   update(@Param('id') id: string, @Body() updatePaiementDto: UpdatePaiementDto) {
     return this.paiementsService.update(id, updatePaiementDto);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'tresorier')
   remove(@Param('id') id: string) {
     return this.paiementsService.remove(id);
   }

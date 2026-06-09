@@ -1,13 +1,13 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreatePaiementDto {
   @IsNotEmpty()
   @IsNumber()
   amount: number;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  method: string;
+  method?: string;
 
   @IsOptional()
   @IsString()
@@ -20,4 +20,28 @@ export class CreatePaiementDto {
   @IsOptional()
   @IsUUID()
   userId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  payerId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  recordedById?: string;
+
+  @IsOptional()
+  @IsIn(['initie', 'en_attente', 'confirme', 'echoue', 'annule'])
+  status?: string;
+
+  @IsOptional()
+  @IsIn(['paiement_personnel', 'paiement_pour_camarade', 'main_a_main', 'ajustement_tresorier'])
+  origin?: string;
+
+  @IsOptional()
+  @IsString()
+  payerPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }

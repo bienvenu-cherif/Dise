@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { AnneeAcademique } from '../annees-academiques/annee-academique.entity';
 import { User } from '../users/user.entity';
 
 @Entity('cotisations')
@@ -32,6 +33,12 @@ export class Cotisation {
 
   @ManyToOne(() => User, { eager: true })
   user: User;
+
+  @ManyToOne(() => AnneeAcademique, { eager: true, nullable: true })
+  anneeAcademique?: AnneeAcademique;
+
+  @Column({ length: 30, nullable: true })
+  sourceMontant?: string;
 
   get remainingAmount(): number {
     return Math.max(0, this.amount - this.paidAmount);

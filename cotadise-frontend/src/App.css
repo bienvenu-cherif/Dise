@@ -88,6 +88,17 @@
   padding: 24px;
 }
 
+.filter-panel {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 240px) minmax(180px, 240px) auto;
+}
+
+.filter-panel h2 {
+  margin: 4px 0 0;
+}
+
 .hero-panel {
   align-items: center;
   display: flex;
@@ -105,6 +116,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.compact {
+  min-height: 34px;
+  padding: 8px 12px;
 }
 
 .eyebrow {
@@ -237,6 +253,28 @@ button {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.7fr);
+}
+
+.indicator-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.indicator-card {
+  min-height: 126px;
+}
+
+.indicator-card span,
+.indicator-card small {
+  color: #94a3b8;
+}
+
+.indicator-card strong {
+  color: #f8fafc;
+  display: block;
+  font-size: 1.45rem;
+  margin: 10px 0 6px;
 }
 
 .stack,
@@ -392,15 +430,21 @@ td {
 
   .login-layout,
   .dashboard-grid,
+  .indicator-grid,
   .two-column {
     grid-template-columns: 1fr;
   }
 
   .hero-panel,
+  .filter-panel,
   .topbar,
   .section-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .filter-panel {
+    grid-template-columns: 1fr;
   }
 
   .summary-strip {

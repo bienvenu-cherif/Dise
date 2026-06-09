@@ -23,6 +23,7 @@ export class AuthService {
         email: true,
         passwordHash: true,
         role: true,
+        accountStatus: true,
         isActive: true,
       },
     });
@@ -32,6 +33,9 @@ export class AuthService {
     const user = await this.validateUserByEmail(identifier);
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Utilisateur introuvable ou inactif');
+    }
+    if (user.accountStatus !== 'actif') {
+      throw new UnauthorizedException('Compte non active. Veuillez completer votre profil dans l application mobile');
     }
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {

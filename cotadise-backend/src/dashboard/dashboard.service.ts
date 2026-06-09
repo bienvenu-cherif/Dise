@@ -20,10 +20,10 @@ export class DashboardService {
     private readonly levelsRepository: Repository<AcademicLevel>,
   ) {}
 
-  async getSummary() {
+  async getSummary(anneeAcademiqueId?: string) {
     const [cotisations, paiements] = await Promise.all([
-      this.cotisationsRepository.find(),
-      this.paiementsRepository.find(),
+      this.findCotisationsForYear(anneeAcademiqueId),
+      this.findPaiementsForYear(anneeAcademiqueId),
     ]);
 
     const totalCotisations = cotisations.length;
@@ -61,21 +61,21 @@ export class DashboardService {
     };
   }
 
-  async getStudentSummary(userId: string) {
+  async getStudentSummary(userId: string, anneeAcademiqueId?: string) {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
     const [cotisations, paiements] = await Promise.all([
-      this.cotisationsRepository.find({ where: { user: { id: userId } }, order: { dueDate: 'DESC' } }),
-      this.paiementsRepository.find({ where: { user: { id: userId } }, order: { paidAt: 'DESC' } }),
+      this.findCotisationsForYear(anneeAcademiqueId, userId),
+      this.findPaiementsForYear(anneeAcademiqueId, userId),
     ]);
 
     const totalAmount = cotisations.reduce((sum, cotisation) => sum + cotisation.amount, 0);
     const totalPaidAmount = cotisations.reduce((sum, cotisation) => sum + cotisation.paidAmount, 0);
     const totalRemainingAmount = cotisations.reduce((sum, cotisation) => sum + Math.max(0, cotisation.amount - cotisation.paidAmount), 0);
-    const levelAmount = user.level?.annualAmount ?? totalAmount;
+    const levelAmount = totalAmount || user.level?.annualAmount || 0;
     const progress = levelAmount > 0 ? Math.min(100, Math.round((totalPaidAmount / levelAmount) * 100)) : 0;
     const lastPayment = paiements.length ? paiements[0].paidAt : null;
 
@@ -104,28 +104,73 @@ export class DashboardService {
     };
   }
 
-  async getRankings(levelId?: string) {
-    const users = await this.usersRepository.find({ relations: { level: true } });
-    const cotisations = await this.cotisationsRepository.find({ relations: { user: true } });
-
-    const grouped = new Map<string, { paidAmount: number; targetAmount: number; user: User }>();
-    for (const user of users) {
-      grouped.set(user.id, {
-        paidAmount: 0,
-        targetAmount: user.level?.annualAmount ?? 0,
-        user,
-      });
+  async getStudentProgression(userId: string, anneeAcademiqueId?: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId }, relations: { level: true } });
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
+    const [cotisations, paiements] = await Promise.all([
+      this.findCotisationsForYear(anneeAcademiqueId, userId),
+      this.findPaiementsForYear(anneeAcademiqueId, userId),
+    ]);
+    const confirmedPayments = paiements
+      .filter((paiement) => paiement.status === 'confirme')
+      .sort((a, b) => new Date(a.paidAt).getTime() - new Date(b.paidAt).getTime());
+    const totalAmount = cotisations.reduce((sum, cotisation) => sum + cotisation.amount, 0);
+    const totalPaidAmount = cotisations.reduce((sum, cotisation) => sum + cotisation.paidAmount, 0);
+    const totalRemainingAmount = Math.max(0, totalAmount - totalPaidAmount);
+
+    let cumulativePaidAmount = 0;
+    const points = confirmedPayments.map((paiement) => {
+      cumulativePaidAmount += paiement.amount;
+      const cappedPaidAmount = Math.min(cumulativePaidAmount, totalAmount);
+      return {
+        paymentId: paiement.id,
+        paidAt: paiement.paidAt,
+        amount: paiement.amount,
+        method: paiement.method,
+        origin: paiement.origin,
+        reference: paiement.reference,
+        cumulativePaidAmount: cappedPaidAmount,
+        remainingAmount: Math.max(0, totalAmount - cappedPaidAmount),
+        progress: totalAmount > 0 ? Math.min(100, Math.round((cappedPaidAmount / totalAmount) * 100)) : 0,
+      };
+    });
+
+    return {
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      },
+      level: user.level ? { id: user.level.id, name: user.level.name } : null,
+      anneeAcademiqueId: anneeAcademiqueId ?? null,
+      totalAmount,
+      totalPaidAmount,
+      totalRemainingAmount,
+      progress: totalAmount > 0 ? Math.min(100, Math.round((totalPaidAmount / totalAmount) * 100)) : 0,
+      points,
+    };
+  }
+
+  async getRankings(levelId?: string, anneeAcademiqueId?: string) {
+    const cotisations = await this.findCotisationsForYear(anneeAcademiqueId);
+
+    const grouped = new Map<string, { paidAmount: number; targetAmount: number; user: User }>();
     for (const cotisation of cotisations) {
-      const entry = grouped.get(cotisation.user.id);
+      let entry = grouped.get(cotisation.user.id);
       if (!entry) {
-        continue;
+        entry = {
+          paidAmount: 0,
+          targetAmount: 0,
+          user: cotisation.user,
+        };
+        grouped.set(cotisation.user.id, entry);
       }
       entry.paidAmount += cotisation.paidAmount;
-      if (!entry.targetAmount) {
-        entry.targetAmount += cotisation.amount;
-      }
+      entry.targetAmount += cotisation.amount;
     }
 
     const rows = Array.from(grouped.values())
@@ -153,9 +198,9 @@ export class DashboardService {
     return rows;
   }
 
-  async getOverdueCotisations(levelId?: string) {
+  async getOverdueCotisations(levelId?: string, anneeAcademiqueId?: string) {
     const today = new Date();
-    const cotisations = await this.cotisationsRepository.find({ relations: { user: { level: true } } });
+    const cotisations = await this.findCotisationsForYear(anneeAcademiqueId);
 
     return cotisations
       .filter((cotisation) => {
@@ -176,6 +221,9 @@ export class DashboardService {
         paidAmount: cotisation.paidAmount,
         remainingAmount: Math.max(0, cotisation.amount - cotisation.paidAmount),
         dueDate: cotisation.dueDate,
+        anneeAcademique: cotisation.anneeAcademique
+          ? { id: cotisation.anneeAcademique.id, libelle: cotisation.anneeAcademique.libelle }
+          : null,
         user: {
           id: cotisation.user.id,
           firstName: cotisation.user.firstName,
@@ -189,8 +237,8 @@ export class DashboardService {
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }
 
-  async generateOverdueExport(levelId?: string): Promise<Buffer> {
-    const overdue = await this.getOverdueCotisations(levelId);
+  async generateOverdueExport(levelId?: string, anneeAcademiqueId?: string): Promise<Buffer> {
+    const overdue = await this.getOverdueCotisations(levelId, anneeAcademiqueId);
     const worksheet = xlsx.utils.json_to_sheet(overdue.map((item) => ({
       'Cotisation ID': item.id,
       Title: item.title,
@@ -198,6 +246,7 @@ export class DashboardService {
       'Paid Amount': item.paidAmount,
       'Remaining Amount': item.remainingAmount,
       'Due Date': item.dueDate,
+      'Academic Year': item.anneeAcademique?.libelle || '',
       'Student ID': item.user.id,
       'Student First Name': item.user.firstName,
       'Student Last Name': item.user.lastName,
@@ -211,16 +260,17 @@ export class DashboardService {
     return xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
   }
 
-  async getLevelSummaries() {
+  async getLevelSummaries(anneeAcademiqueId?: string) {
     const [levels, cotisations] = await Promise.all([
       this.levelsRepository.find({ relations: { users: true } }),
-      this.cotisationsRepository.find({ relations: { user: true } }),
+      this.findCotisationsForYear(anneeAcademiqueId),
     ]);
 
     return levels.map((level) => {
       const levelCotisations = cotisations.filter((cotisation) => cotisation.user.level?.id === level.id);
       const paidAmount = levelCotisations.reduce((sum, cotisation) => sum + cotisation.paidAmount, 0);
-      const expectedAmount = level.annualAmount * (level.users?.length ?? 0);
+      const expectedAmount = levelCotisations.reduce((sum, cotisation) => sum + cotisation.amount, 0);
+      const studentsCount = new Set(levelCotisations.map((cotisation) => cotisation.user.id)).size;
       const overdueCotisations = levelCotisations.filter((cotisation) => {
         const dueDate = new Date(cotisation.dueDate);
         return !cotisation.paid && dueDate < new Date();
@@ -233,7 +283,7 @@ export class DashboardService {
         name: level.name,
         description: level.description,
         annualAmount: level.annualAmount,
-        studentsCount: level.users?.length ?? 0,
+        studentsCount,
         paidAmount,
         expectedAmount,
         remainingAmount: Math.max(0, expectedAmount - paidAmount),
@@ -244,8 +294,8 @@ export class DashboardService {
     });
   }
 
-  async getLevelSummary(levelId: string) {
-    const summaries = await this.getLevelSummaries();
+  async getLevelSummary(levelId: string, anneeAcademiqueId?: string) {
+    const summaries = await this.getLevelSummaries(anneeAcademiqueId);
     const summary = summaries.find((entry) => entry.levelId === levelId);
     if (!summary) {
       throw new NotFoundException(`Academic level with id ${levelId} not found`);
@@ -253,14 +303,14 @@ export class DashboardService {
     return summary;
   }
 
-  async getUserRanking(userId: string) {
+  async getUserRanking(userId: string, anneeAcademiqueId?: string) {
     const user = await this.usersRepository.findOne({ where: { id: userId }, relations: { level: true } });
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
     const levelId = user.level?.id;
-    const rankings = await this.getRankings(levelId);
+    const rankings = await this.getRankings(levelId, anneeAcademiqueId);
     const position = rankings.findIndex((entry) => entry.userId === userId);
 
     return {
@@ -282,5 +332,41 @@ export class DashboardService {
       totalInLevel: rankings.length,
       rankings,
     };
+  }
+
+  private findCotisationsForYear(anneeAcademiqueId?: string, userId?: string): Promise<Cotisation[]> {
+    const query = this.cotisationsRepository
+      .createQueryBuilder('cotisation')
+      .leftJoinAndSelect('cotisation.user', 'user')
+      .leftJoinAndSelect('user.level', 'level')
+      .leftJoinAndSelect('cotisation.anneeAcademique', 'anneeAcademique')
+      .orderBy('cotisation.dueDate', 'DESC');
+
+    if (anneeAcademiqueId) {
+      query.andWhere('anneeAcademique.id = :anneeAcademiqueId', { anneeAcademiqueId });
+    }
+    if (userId) {
+      query.andWhere('user.id = :userId', { userId });
+    }
+
+    return query.getMany();
+  }
+
+  private findPaiementsForYear(anneeAcademiqueId?: string, userId?: string): Promise<Paiement[]> {
+    const query = this.paiementsRepository
+      .createQueryBuilder('paiement')
+      .leftJoinAndSelect('paiement.user', 'user')
+      .leftJoinAndSelect('paiement.cotisation', 'cotisation')
+      .leftJoinAndSelect('cotisation.anneeAcademique', 'anneeAcademique')
+      .orderBy('paiement.paidAt', 'DESC');
+
+    if (anneeAcademiqueId) {
+      query.andWhere('anneeAcademique.id = :anneeAcademiqueId', { anneeAcademiqueId });
+    }
+    if (userId) {
+      query.andWhere('user.id = :userId', { userId });
+    }
+
+    return query.getMany();
   }
 }

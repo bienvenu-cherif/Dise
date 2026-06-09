@@ -9,7 +9,7 @@ import { GenerateAcademicLevelCotisationsDto } from './dto/generate-academic-lev
 
 @Controller('levels')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'tresorier')
 export class LevelsController {
   constructor(private readonly levelsService: LevelsService) {}
 

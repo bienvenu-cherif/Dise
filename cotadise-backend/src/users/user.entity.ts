@@ -18,11 +18,29 @@ export class User {
   @Column({ length: 20, nullable: true })
   phone?: string;
 
+  @Column({ length: 20, nullable: true })
+  wavePhone?: string;
+
+  @Column({ default: false })
+  wavePhoneVerified: boolean;
+
   @Column({ name: 'password_hash', length: 255, select: false })
   passwordHash: string;
 
   @Column({ length: 20, default: 'etudiant' })
   role: string;
+
+  @Column({ length: 30, default: 'actif' })
+  accountStatus: string;
+
+  @Column({ length: 30, default: 'creation_manuelle' })
+  entrySource: string;
+
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ length: 50, nullable: true })
+  promotionSortante?: string;
 
   @Column({ default: true })
   isActive: boolean;

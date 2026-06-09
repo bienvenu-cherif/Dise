@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as xlsx from 'xlsx';
+import { ActivateInvitedUserDto } from './dto/activate-invited-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
@@ -23,6 +24,9 @@ export class UsersService {
     const user = this.usersRepository.create({
       ...userData,
       passwordHash,
+      wavePhone: createUserDto.wavePhone ?? createUserDto.phone,
+      accountStatus: createUserDto.accountStatus ?? 'actif',
+      entrySource: createUserDto.entrySource ?? 'creation_manuelle',
       role: dtoRole ?? role,
     });
 
@@ -96,6 +100,8 @@ export class UsersService {
             password,
             levelId,
             role,
+            accountStatus: 'invite',
+            entrySource: 'import_officiel',
           },
           role,
         );
@@ -118,6 +124,57 @@ export class UsersService {
 
   findAll(): Promise<User[]> {
     return this.usersRepository.find({ order: { createdAt: 'DESC' } });
+  }
+
+  searchInvitedStudents(query: string): Promise<User[]> {
+    const normalizedQuery = query?.trim();
+    if (!normalizedQuery || normalizedQuery.length < 2) {
+      throw new BadRequestException('Veuillez saisir au moins 2 caracteres pour rechercher votre nom');
+    }
+    const builder = this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.level', 'level')
+      .where('user.accountStatus IN (:...statuses)', { statuses: ['invite', 'profil_a_completer'] })
+      .andWhere('user.entrySource = :entrySource', { entrySource: 'import_officiel' })
+      .orderBy('user.lastName', 'ASC')
+      .addOrderBy('user.firstName', 'ASC')
+      .take(12);
+
+    builder.andWhere(
+      '(LOWER(user.firstName) LIKE :query OR LOWER(user.lastName) LIKE :query OR LOWER(user.email) LIKE :query)',
+      { query: `%${normalizedQuery.toLowerCase()}%` },
+    );
+
+    return builder.getMany();
+  }
+
+  async activateInvitedStudent(id: string, dto: ActivateInvitedUserDto): Promise<User> {
+    const user = await this.findOne(id);
+    if (!['invite', 'profil_a_completer'].includes(user.accountStatus)) {
+      throw new BadRequestException('Ce compte est deja active ou ne peut pas etre active depuis ce parcours');
+    }
+    if (user.entrySource !== 'import_officiel') {
+      throw new BadRequestException('Seuls les comptes issus de la liste officielle peuvent etre actives ici');
+    }
+
+    const normalizedEmail = dto.email.toLowerCase();
+    const existingEmailOwner = await this.usersRepository.findOne({ where: { email: normalizedEmail } });
+    if (existingEmailOwner && existingEmailOwner.id !== user.id) {
+      throw new BadRequestException('Cet email est deja utilise par un autre compte');
+    }
+
+    user.email = normalizedEmail;
+    user.phone = dto.phone;
+    user.wavePhone = dto.wavePhone ?? dto.phone;
+    user.wavePhoneVerified = false;
+    user.emailVerified = false;
+    user.passwordHash = await bcrypt.hash(dto.password, 10);
+    user.accountStatus = 'actif';
+    user.isActive = true;
+
+    const saved = await this.usersRepository.save(user);
+    (saved as any).passwordHash = undefined;
+    return saved;
   }
 
   async findOne(id: string): Promise<User> {

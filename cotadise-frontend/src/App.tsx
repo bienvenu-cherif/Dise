@@ -24,6 +24,15 @@ type Level = {
   annualAmount: number
 }
 
+type AcademicYear = {
+  id: string
+  libelle: string
+  statut: string
+  active: boolean
+  dateDebut: string
+  dateFin: string
+}
+
 type User = {
   id: string
   firstName: string
@@ -31,6 +40,7 @@ type User = {
   email: string
   phone?: string | null
   role: string
+  promotionSortante?: string | null
   level?: Level | null
 }
 
@@ -52,8 +62,40 @@ type Paiement = {
   method: string
   reference?: string | null
   paidAt?: string
+  status?: string
+  origin?: string
   cotisation?: Cotisation
   user?: User
+}
+
+type DonAlumni = {
+  id: string
+  amount: number
+  method: string
+  status: string
+  origin: string
+  reference?: string | null
+  donatedAt?: string
+  alumni?: User
+  recordedBy?: User | null
+}
+
+type PromotionAlumni = {
+  promotion: string
+  totalAlumni: number
+  alumni: User[]
+}
+
+type Defi = {
+  id: string
+  status: string
+  challenger: User
+  opponent: User
+  winner?: User | null
+  challengerProgress?: number
+  opponentProgress?: number
+  createdAt?: string
+  completedAt?: string | null
 }
 
 type Adherent = {
@@ -118,6 +160,18 @@ const getStatusLabel = (status: string) => {
     partial: 'Partielle',
     pending: 'En attente',
     overdue: 'En retard',
+    confirme: 'Confirme',
+    en_attente: 'En attente',
+    initie: 'Initie',
+    echoue: 'Echoue',
+    annule: 'Annule',
+    termine: 'Termine',
+    accepte: 'Accepte',
+    refuse: 'Refuse',
+    don_wave: 'Don Wave',
+    don_main_a_main: 'Don main a main',
+    main_a_main: 'Main a main',
+    paiement_pour_camarade: 'Pour camarade',
   }
   return labels[status] ?? status
 }
@@ -136,6 +190,15 @@ const getStoredUser = () => {
     localStorage.removeItem('cotadise_user')
     return null
   }
+}
+
+const toQueryString = (params: Record<string, string | undefined>) => {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) search.set(key, value)
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
 }
 
 const request = async <T,>(path: string, token: string, init: RequestInit = {}) => {
@@ -184,10 +247,16 @@ function App() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [studentSummary, setStudentSummary] = useState<StudentSummary | null>(null)
   const [studentRanking, setStudentRanking] = useState<StudentRanking | null>(null)
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([])
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('')
+  const [selectedLevelId, setSelectedLevelId] = useState('')
   const [levels, setLevels] = useState<Level[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [cotisations, setCotisations] = useState<Cotisation[]>([])
   const [paiements, setPaiements] = useState<Paiement[]>([])
+  const [dons, setDons] = useState<DonAlumni[]>([])
+  const [promotionsAlumni, setPromotionsAlumni] = useState<PromotionAlumni[]>([])
+  const [defis, setDefis] = useState<Defi[]>([])
   const [adherents, setAdherents] = useState<Adherent[]>([])
   const [rankings, setRankings] = useState<Ranking[]>([])
   const [loading, setLoading] = useState(false)
@@ -221,13 +290,85 @@ function App() {
   const [importFile, setImportFile] = useState<File | null>(null)
 
   const students = useMemo(() => users.filter(item => item.role === 'etudiant'), [users])
+  const alumni = useMemo(() => users.filter(item => item.role === 'alumni'), [users])
   const isConnected = Boolean(token)
   const isAdmin = user?.role === 'admin' || user?.role === 'tresorier'
 
+  const dashboardTotals = useMemo(() => {
+    const scoped = Boolean(selectedAcademicYearId || selectedLevelId)
+    const totalAmount = cotisations.reduce((sum, item) => sum + item.amount, 0)
+    const totalPaidAmount = cotisations.reduce((sum, item) => sum + (item.paidAmount ?? 0), 0)
+    const totalRemainingAmount = cotisations.reduce((sum, item) => sum + Math.max(0, item.amount - (item.paidAmount ?? 0)), 0)
+    const overdueCotisations = cotisations.filter(item => !item.paid && new Date(item.dueDate) < new Date())
+    const totalOverdueAmount = overdueCotisations.reduce((sum, item) => sum + Math.max(0, item.amount - (item.paidAmount ?? 0)), 0)
+
+    return {
+      totalAmount: scoped ? totalAmount : totalAmount || summary?.totalAmount || 0,
+      totalPaidAmount: scoped ? totalPaidAmount : totalPaidAmount || summary?.totalPaidAmount || 0,
+      totalRemainingAmount: scoped ? totalRemainingAmount : totalRemainingAmount || summary?.totalRemainingAmount || 0,
+      totalOverdue: scoped ? overdueCotisations.length : overdueCotisations.length || summary?.totalOverdue || 0,
+      totalOverdueAmount: scoped ? totalOverdueAmount : totalOverdueAmount || summary?.totalOverdueAmount || 0,
+    }
+  }, [cotisations, selectedAcademicYearId, selectedLevelId, summary])
+
   const completionRate = useMemo(() => {
-    if (!summary || summary.totalAmount <= 0) return 0
-    return Math.min(100, Math.round((summary.totalPaidAmount / summary.totalAmount) * 100))
-  }, [summary])
+    if (dashboardTotals.totalAmount <= 0) return 0
+    return Math.min(100, Math.round((dashboardTotals.totalPaidAmount / dashboardTotals.totalAmount) * 100))
+  }, [dashboardTotals])
+
+  const adminQuery = useMemo(
+    () => toQueryString({ anneeId: selectedAcademicYearId, levelId: selectedLevelId }),
+    [selectedAcademicYearId, selectedLevelId],
+  )
+
+  const selectedAcademicYear = useMemo(
+    () => academicYears.find(item => item.id === selectedAcademicYearId),
+    [academicYears, selectedAcademicYearId],
+  )
+
+  const dashboardYearQuery = useMemo(
+    () => toQueryString({ anneeId: selectedAcademicYearId }),
+    [selectedAcademicYearId],
+  )
+
+  const overdueExportPath = useMemo(() => {
+    if (selectedLevelId) return `/dashboard/overdue/level/${selectedLevelId}/export${dashboardYearQuery}`
+    return `/dashboard/overdue/export${dashboardYearQuery}`
+  }, [dashboardYearQuery, selectedLevelId])
+
+  const cotisationsExportPath = `/cotisations/export${adminQuery}`
+  const paiementsExportPath = `/paiements/export${adminQuery}`
+
+  const adminIndicators = useMemo(() => {
+    const fullyPaidStudents = new Set(cotisations.filter(item => item.paid || (item.paidAmount ?? 0) >= item.amount).map(item => item.user?.id).filter(Boolean))
+    const partialStudents = new Set(cotisations.filter(item => !item.paid && (item.paidAmount ?? 0) > 0 && (item.paidAmount ?? 0) < item.amount).map(item => item.user?.id).filter(Boolean))
+    const zeroPaymentStudents = new Set(cotisations.filter(item => (item.paidAmount ?? 0) <= 0 && !item.paid).map(item => item.user?.id).filter(Boolean))
+    const confirmedPayments = paiements.filter(item => !item.status || item.status === 'confirme')
+    const pendingPayments = paiements.filter(item => item.status === 'en_attente' || item.status === 'initie')
+    const failedPayments = paiements.filter(item => item.status === 'echoue' || item.status === 'annule')
+    const friendPayments = paiements.filter(item => item.origin === 'paiement_pour_camarade')
+    const cashPayments = paiements.filter(item => item.origin === 'main_a_main')
+    const confirmedDons = dons.filter(item => item.status === 'confirme')
+    const activeDefis = defis.filter(item => item.status === 'en_attente' || item.status === 'accepte')
+    const completedDefis = defis.filter(item => item.status === 'termine')
+
+    return {
+      fullyPaidStudents: fullyPaidStudents.size,
+      partialStudents: partialStudents.size,
+      zeroPaymentStudents: zeroPaymentStudents.size,
+      confirmedPayments: confirmedPayments.length,
+      pendingPayments: pendingPayments.length,
+      failedPayments: failedPayments.length,
+      friendPayments: friendPayments.length,
+      cashPayments: cashPayments.length,
+      totalDonAmount: confirmedDons.reduce((sum, item) => sum + item.amount, 0),
+      totalDons: confirmedDons.length,
+      activeDefis: activeDefis.length,
+      completedDefis: completedDefis.length,
+      alumniCount: alumni.length,
+      promotionCount: promotionsAlumni.length,
+    }
+  }, [alumni.length, cotisations, defis, dons, paiements, promotionsAlumni.length])
 
   const loadData = useCallback(async () => {
     if (!token) return
@@ -265,23 +406,37 @@ function App() {
     }
 
     const results = await Promise.allSettled([
-      request<Summary>('/dashboard/summary', token),
+      request<Summary>(`/dashboard/summary${toQueryString({ anneeId: selectedAcademicYearId })}`, token),
+      request<AcademicYear[]>('/annees-academiques', token),
       request<Level[]>('/levels', token),
       request<User[]>('/users', token),
-      request<Cotisation[]>('/cotisations', token),
-      request<Paiement[]>('/paiements', token),
+      request<Cotisation[]>(`/cotisations${adminQuery}`, token),
+      request<Paiement[]>(`/paiements${adminQuery}`, token),
       request<Adherent[]>('/adherents', token),
-      request<Ranking[]>('/dashboard/rankings', token),
+      request<Ranking[]>(selectedLevelId ? `/dashboard/rankings/level/${selectedLevelId}${toQueryString({ anneeId: selectedAcademicYearId })}` : `/dashboard/rankings${toQueryString({ anneeId: selectedAcademicYearId })}`, token),
+      request<DonAlumni[]>('/dons', token),
+      request<PromotionAlumni[]>('/alumni/promotions', token),
+      request<Defi[]>('/defis', token),
     ])
 
-    const [summaryResult, levelsResult, usersResult, cotisationsResult, paiementsResult, adherentsResult, rankingsResult] = results
+    const [summaryResult, yearsResult, levelsResult, usersResult, cotisationsResult, paiementsResult, adherentsResult, rankingsResult, donsResult, promotionsResult, defisResult] = results
     if (summaryResult.status === 'fulfilled') setSummary(summaryResult.value)
+    if (yearsResult.status === 'fulfilled') {
+      setAcademicYears(yearsResult.value)
+      if (!selectedAcademicYearId) {
+        const activeYear = yearsResult.value.find(item => item.active)
+        if (activeYear) setSelectedAcademicYearId(activeYear.id)
+      }
+    }
     if (levelsResult.status === 'fulfilled') setLevels(levelsResult.value)
     if (usersResult.status === 'fulfilled') setUsers(usersResult.value)
     if (cotisationsResult.status === 'fulfilled') setCotisations(cotisationsResult.value)
     if (paiementsResult.status === 'fulfilled') setPaiements(paiementsResult.value)
     if (adherentsResult.status === 'fulfilled') setAdherents(adherentsResult.value)
     if (rankingsResult.status === 'fulfilled') setRankings(rankingsResult.value)
+    if (donsResult.status === 'fulfilled') setDons(donsResult.value)
+    if (promotionsResult.status === 'fulfilled') setPromotionsAlumni(promotionsResult.value)
+    if (defisResult.status === 'fulfilled') setDefis(defisResult.value)
 
     const rejected = results.find(result => result.status === 'rejected') as PromiseRejectedResult | undefined
     if (rejected) {
@@ -289,7 +444,7 @@ function App() {
     }
 
     setLoading(false)
-  }, [isAdmin, token])
+  }, [adminQuery, isAdmin, selectedAcademicYearId, selectedLevelId, token])
 
   useEffect(() => {
     loadData().catch(err => {
@@ -339,10 +494,16 @@ function App() {
     setSummary(null)
     setStudentSummary(null)
     setStudentRanking(null)
+    setAcademicYears([])
+    setSelectedAcademicYearId('')
+    setSelectedLevelId('')
     setLevels([])
     setUsers([])
     setCotisations([])
     setPaiements([])
+    setDons([])
+    setPromotionsAlumni([])
+    setDefis([])
     setAdherents([])
     setRankings([])
     localStorage.removeItem('cotadise_token')
@@ -656,10 +817,10 @@ function App() {
                 <p>Vue operationnelle des cotisations, paiements, etudiants et relances prioritaires.</p>
               </div>
               <div className="hero-actions">
-                <button type="button" className="ghost" onClick={() => handleDownload('/cotisations/export', 'cotisations.xlsx')}>
+                <button type="button" className="ghost" onClick={() => handleDownload(cotisationsExportPath, 'cotisations.xlsx')}>
                   Export cotisations
                 </button>
-                <button type="button" className="ghost" onClick={() => handleDownload('/paiements/export', 'paiements.xlsx')}>
+                <button type="button" className="ghost" onClick={() => handleDownload(paiementsExportPath, 'paiements.xlsx')}>
                   Export paiements
                 </button>
                 <button type="button" className="ghost" onClick={loadData}>
@@ -668,23 +829,55 @@ function App() {
               </div>
             </section>
 
+            <section className="panel filter-panel">
+              <div>
+                <p className="eyebrow">Filtres de pilotage</p>
+                <h2>{selectedAcademicYear?.libelle ?? 'Vue globale'}</h2>
+              </div>
+              <label>Annee
+                <select value={selectedAcademicYearId} onChange={e => setSelectedAcademicYearId(e.target.value)}>
+                  <option value="">Toutes les annees</option>
+                  {academicYears.map(item => (
+                    <option key={item.id} value={item.id}>{item.libelle}{item.active ? ' - active' : ''}</option>
+                  ))}
+                </select>
+              </label>
+              <label>Niveau
+                <select value={selectedLevelId} onChange={e => setSelectedLevelId(e.target.value)}>
+                  <option value="">Tous les niveaux</option>
+                  {levels.map(level => <option key={level.id} value={level.id}>{level.name}</option>)}
+                </select>
+              </label>
+              <button type="button" className="ghost compact" onClick={() => { setSelectedAcademicYearId(''); setSelectedLevelId('') }}>
+                Reinitialiser
+              </button>
+            </section>
+
             {summary && (
               <section className="summary-strip">
                 <article>
                   <span>Attendu</span>
-                  <strong>{formatCurrency(summary.totalAmount)}</strong>
+                  <strong>{formatCurrency(dashboardTotals.totalAmount)}</strong>
                 </article>
                 <article>
                   <span>Collecte</span>
-                  <strong>{formatCurrency(summary.totalPaidAmount)}</strong>
+                  <strong>{formatCurrency(dashboardTotals.totalPaidAmount)}</strong>
                 </article>
                 <article>
                   <span>Restant</span>
-                  <strong>{formatCurrency(summary.totalRemainingAmount)}</strong>
+                  <strong>{formatCurrency(dashboardTotals.totalRemainingAmount)}</strong>
                 </article>
                 <article>
                   <span>Retards</span>
-                  <strong>{summary.totalOverdue}</strong>
+                  <strong>{dashboardTotals.totalOverdue}</strong>
+                </article>
+                <article>
+                  <span>Dons alumni</span>
+                  <strong>{formatCurrency(adminIndicators.totalDonAmount)}</strong>
+                </article>
+                <article>
+                  <span>Promotions</span>
+                  <strong>{adminIndicators.promotionCount}</strong>
                 </article>
               </section>
             )}
@@ -697,6 +890,9 @@ function App() {
                 ['cotisations', 'Cotisations'],
                 ['paiements', 'Paiements'],
                 ['rankings', 'Classement'],
+                ['defis', 'Defis'],
+                ['alumni', 'Alumni'],
+                ['dons', 'Dons'],
                 ['adherents', 'Adherents'],
               ].map(([tab, label]) => (
                 <button key={tab} type="button" className={tab === activeTab ? 'tab active' : 'tab'} onClick={() => setActiveTab(tab)}>
@@ -709,37 +905,110 @@ function App() {
             {notice && <div className={`status-banner ${notice.kind === 'error' ? 'status-error' : 'status-success'}`}>{notice.message}</div>}
 
             {activeTab === 'summary' && (
-              <section className="dashboard-grid">
-                <div className="panel progress-panel">
-                  <div className="section-header">
-                    <div>
-                      <p className="eyebrow">Recouvrement</p>
-                      <h2>Progression globale</h2>
+              <>
+                <section className="dashboard-grid">
+                  <div className="panel progress-panel">
+                    <div className="section-header">
+                      <div>
+                        <p className="eyebrow">Recouvrement</p>
+                        <h2>Progression globale</h2>
+                      </div>
+                      <strong>{completionRate}%</strong>
                     </div>
-                    <strong>{completionRate}%</strong>
+                    <div className="progress-track">
+                      <span style={{ width: `${completionRate}%` }} />
+                    </div>
+                    <div className="split-stats">
+                      <span>{adminIndicators.fullyPaidStudents} soldes</span>
+                      <span>{adminIndicators.partialStudents} partiels</span>
+                      <span>{adminIndicators.zeroPaymentStudents} a 0</span>
+                    </div>
                   </div>
-                  <div className="progress-track">
-                    <span style={{ width: `${completionRate}%` }} />
-                  </div>
-                  <div className="split-stats">
-                    <span>{summary?.totalPaid ?? 0} payees</span>
-                    <span>{summary?.totalPartial ?? 0} partielles</span>
-                    <span>{summary?.totalPending ?? 0} en attente</span>
-                  </div>
-                </div>
 
-                <div className="panel">
-                  <div className="section-header">
-                    <h2>Actions rapides</h2>
+                  <div className="panel">
+                    <div className="section-header">
+                      <h2>Actions rapides</h2>
+                    </div>
+                    <div className="quick-actions">
+                      <button type="button" className="ghost" onClick={() => setActiveTab('users')}>Ajouter un etudiant</button>
+                      <button type="button" className="ghost" onClick={() => setActiveTab('cotisations')}>Creer une cotisation</button>
+                      <button type="button" className="ghost" onClick={() => setActiveTab('paiements')}>Saisir un paiement</button>
+                      <button type="button" className="ghost" onClick={() => handleDownload(overdueExportPath, 'cotisations-en-retard.xlsx')}>Exporter retards</button>
+                      <button type="button" className="ghost" onClick={() => handleDownload('/dons/export', 'dons-alumni.xlsx')}>Exporter dons</button>
+                    </div>
                   </div>
-                  <div className="quick-actions">
-                    <button type="button" className="ghost" onClick={() => setActiveTab('users')}>Ajouter un etudiant</button>
-                    <button type="button" className="ghost" onClick={() => setActiveTab('cotisations')}>Creer une cotisation</button>
-                    <button type="button" className="ghost" onClick={() => setActiveTab('paiements')}>Saisir un paiement</button>
-                    <button type="button" className="ghost" onClick={() => handleDownload('/dashboard/overdue/export', 'cotisations-en-retard.xlsx')}>Exporter retards</button>
-                  </div>
-                </div>
-              </section>
+                </section>
+
+                <section className="indicator-grid">
+                  <article className="panel indicator-card">
+                    <span>Retards financiers</span>
+                    <strong>{formatCurrency(dashboardTotals.totalOverdueAmount)}</strong>
+                    <small>{dashboardTotals.totalOverdue} cotisations en retard</small>
+                  </article>
+                  <article className="panel indicator-card">
+                    <span>Paiements</span>
+                    <strong>{adminIndicators.confirmedPayments}</strong>
+                    <small>{adminIndicators.pendingPayments} en attente, {adminIndicators.failedPayments} echoues</small>
+                  </article>
+                  <article className="panel indicator-card">
+                    <span>Solidarite</span>
+                    <strong>{adminIndicators.friendPayments}</strong>
+                    <small>{adminIndicators.cashPayments} paiements main a main</small>
+                  </article>
+                  <article className="panel indicator-card">
+                    <span>Defis</span>
+                    <strong>{adminIndicators.activeDefis}</strong>
+                    <small>{adminIndicators.completedDefis} termines</small>
+                  </article>
+                  <article className="panel indicator-card">
+                    <span>Alumni</span>
+                    <strong>{adminIndicators.alumniCount}</strong>
+                    <small>{adminIndicators.promotionCount} promotions sortantes</small>
+                  </article>
+                  <article className="panel indicator-card">
+                    <span>Dons confirmes</span>
+                    <strong>{formatCurrency(adminIndicators.totalDonAmount)}</strong>
+                    <small>{adminIndicators.totalDons} dons enregistres</small>
+                  </article>
+                </section>
+
+                <section className="two-column">
+                  <DataPanel title="Relances prioritaires" action={<button type="button" className="ghost" onClick={() => handleDownload(overdueExportPath, 'cotisations-en-retard.xlsx')}>Exporter</button>}>
+                    <table>
+                      <thead><tr><th>Etudiant</th><th>Niveau</th><th>Reste</th><th>Echeance</th></tr></thead>
+                      <tbody>
+                        {cotisations
+                          .filter(item => !item.paid && new Date(item.dueDate) < new Date())
+                          .slice(0, 8)
+                          .map(item => (
+                            <tr key={item.id}>
+                              <td>{getFullName(item.user)}</td>
+                              <td>{item.user?.level?.name ?? '-'}</td>
+                              <td>{formatCurrency(Math.max(0, item.amount - (item.paidAmount ?? 0)))}</td>
+                              <td>{new Date(item.dueDate).toLocaleDateString('fr-FR')}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </DataPanel>
+
+                  <DataPanel title="Derniers paiements">
+                    <table>
+                      <thead><tr><th>Etudiant</th><th>Montant</th><th>Origine</th><th>Date</th></tr></thead>
+                      <tbody>
+                        {paiements.slice(0, 8).map(item => (
+                          <tr key={item.id}>
+                            <td>{getFullName(item.user)}</td>
+                            <td>{formatCurrency(item.amount)}</td>
+                            <td>{getStatusLabel(item.origin ?? item.method)}</td>
+                            <td>{item.paidAt ? new Date(item.paidAt).toLocaleDateString('fr-FR') : '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </DataPanel>
+                </section>
+              </>
             )}
 
             {activeTab === 'levels' && (
@@ -834,7 +1103,7 @@ function App() {
                   <button type="submit" className="cta">Creer</button>
                 </form>
 
-                <DataPanel title="Cotisations" action={<button type="button" className="ghost" onClick={() => handleDownload('/cotisations/export', 'cotisations.xlsx')}>Exporter</button>}>
+                <DataPanel title="Cotisations" action={<button type="button" className="ghost" onClick={() => handleDownload(cotisationsExportPath, 'cotisations.xlsx')}>Exporter</button>}>
                   <table>
                     <thead><tr><th>Titre</th><th>Etudiant</th><th>Montant</th><th>Paye</th><th>Statut</th></tr></thead>
                     <tbody>
@@ -879,7 +1148,7 @@ function App() {
                   <button type="submit" className="cta">Enregistrer</button>
                 </form>
 
-                <DataPanel title="Paiements" action={<button type="button" className="ghost" onClick={() => handleDownload('/paiements/export', 'paiements.xlsx')}>Exporter</button>}>
+                <DataPanel title="Paiements" action={<button type="button" className="ghost" onClick={() => handleDownload(paiementsExportPath, 'paiements.xlsx')}>Exporter</button>}>
                   <table>
                     <thead><tr><th>Etudiant</th><th>Montant</th><th>Methode</th><th>Reference</th></tr></thead>
                     <tbody>
@@ -911,6 +1180,83 @@ function App() {
                         </tr>
                       )
                     })}
+                  </tbody>
+                </table>
+              </DataPanel>
+            )}
+
+            {activeTab === 'defis' && (
+              <DataPanel title="Defis de cotisation">
+                <table>
+                  <thead><tr><th>Createur</th><th>Adversaire</th><th>Statut</th><th>Progressions</th><th>Gagnant</th></tr></thead>
+                  <tbody>
+                    {defis.map(item => (
+                      <tr key={item.id}>
+                        <td>{getFullName(item.challenger)}</td>
+                        <td>{getFullName(item.opponent)}</td>
+                        <td><span className={`badge ${item.status}`}>{getStatusLabel(item.status)}</span></td>
+                        <td>{item.challengerProgress ?? 0}% / {item.opponentProgress ?? 0}%</td>
+                        <td>{item.winner ? getFullName(item.winner) : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </DataPanel>
+            )}
+
+            {activeTab === 'alumni' && (
+              <section className="two-column">
+                <DataPanel title="Promotions alumni">
+                  <table>
+                    <thead><tr><th>Promotion</th><th>Alumni</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {promotionsAlumni.map(item => (
+                        <tr key={item.promotion}>
+                          <td>{item.promotion}</td>
+                          <td>{item.totalAlumni}</td>
+                          <td>
+                            <button type="button" className="ghost compact" onClick={() => setActiveTab('dons')}>
+                              Voir dons
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataPanel>
+
+                <DataPanel title="Alumni">
+                  <table>
+                    <thead><tr><th>Nom</th><th>Email</th><th>Promotion</th></tr></thead>
+                    <tbody>
+                      {alumni.map(item => (
+                        <tr key={item.id}>
+                          <td>{getFullName(item)}</td>
+                          <td>{item.email}</td>
+                          <td>{item.promotionSortante ?? '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataPanel>
+              </section>
+            )}
+
+            {activeTab === 'dons' && (
+              <DataPanel title="Dons alumni" action={<button type="button" className="ghost" onClick={() => handleDownload('/dons/export', 'dons-alumni.xlsx')}>Exporter</button>}>
+                <table>
+                  <thead><tr><th>Alumni</th><th>Promotion</th><th>Montant</th><th>Methode</th><th>Origine</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {dons.map(item => (
+                      <tr key={item.id}>
+                        <td>{getFullName(item.alumni)}</td>
+                        <td>{item.alumni?.promotionSortante ?? '-'}</td>
+                        <td>{formatCurrency(item.amount)}</td>
+                        <td>{item.method}</td>
+                        <td>{getStatusLabel(item.origin)}</td>
+                        <td>{item.donatedAt ? new Date(item.donatedAt).toLocaleDateString('fr-FR') : '-'}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </DataPanel>
