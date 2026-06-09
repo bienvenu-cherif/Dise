@@ -1,0 +1,17 @@
+# Backend
+cotadise-backend/node_modules/
+cotadise-backend/dist/
+cotadise-backend/.env
+
+# Frontend
+cotadise-frontend/node_modules/
+cotadise-frontend/dist/
+cotadise-frontend/.env
+
+# IDE
+.vscode/
+
+# Logs
+*.log 
+
+
