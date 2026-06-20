@@ -1,7 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 import { CreateAnneeAcademiqueDto } from './create-annee-academique.dto';
-import { StatutAnneeAcademique } from '../annee-academique.entity';
+import type { StatutAnneeAcademique } from '../annee-academique.entity';
 
 export class UpdateAnneeAcademiqueDto extends PartialType(CreateAnneeAcademiqueDto) {
   @IsOptional()

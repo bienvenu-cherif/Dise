@@ -39,6 +39,21 @@ export class User {
   @Column({ default: false })
   emailVerified: boolean;
 
+  @Column({ length: 255, nullable: true, select: false })
+  activationCodeHash?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  activationCodeExpiresAt?: Date;
+
+  @Column({ length: 255, nullable: true, select: false })
+  resetPasswordCodeHash?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpiresAt?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordRequestedAt?: Date;
+
   @Column({ length: 50, nullable: true })
   promotionSortante?: string;
 

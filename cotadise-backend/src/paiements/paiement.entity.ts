@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { WaveMarchandConfiguration } from '../configurations-wave/wave-marchand-configuration.entity';
 import { Cotisation } from '../cotisations/cotisation.entity';
 import { User } from '../users/user.entity';
 
@@ -28,6 +29,12 @@ export class Paiement {
   @Column({ length: 150, nullable: true })
   note?: string;
 
+  @Column({ type: 'float', default: 0 })
+  appliedAmount: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  appliedAt?: Date;
+
   @ManyToOne(() => Cotisation, { eager: true })
   cotisation: Cotisation;
 
@@ -39,6 +46,9 @@ export class Paiement {
 
   @ManyToOne(() => User, { eager: true, nullable: true })
   recordedBy?: User;
+
+  @ManyToOne(() => WaveMarchandConfiguration, { eager: true, nullable: true })
+  waveConfiguration?: WaveMarchandConfiguration;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   paidAt: Date;

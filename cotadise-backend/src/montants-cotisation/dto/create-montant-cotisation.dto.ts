@@ -1,5 +1,5 @@
 import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
-import { TypeMontantCotisation } from '../montant-cotisation.entity';
+import type { TypeMontantCotisation } from '../montant-cotisation.entity';
 
 export class CreateMontantCotisationDto {
   @IsUUID()

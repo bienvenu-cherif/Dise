@@ -6,10 +6,12 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from '../users/user.entity';
+import { EmailOutboxModule } from '../email-outbox/email-outbox.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
+    EmailOutboxModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'changeme',

@@ -4,9 +4,10 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { AcademicLevel } from '../levels/academic-level.entity';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, AcademicLevel])],
+  imports: [TypeOrmModule.forFeature([User, AcademicLevel]), AuditModule],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

@@ -1,0 +1,40 @@
+name: Validation CotaDISE
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        projet: [cotadise-backend, cotadise-frontend, cotadise-mobile]
+    defaults:
+      run:
+        working-directory: ${{ matrix.projet }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.projet }}/package-lock.json
+      - name: Installer les dependances
+        run: npm ci
+      - name: Tester le backend
+        if: matrix.projet == 'cotadise-backend'
+        run: npm test -- --runInBand
+      - name: Construire le backend
+        if: matrix.projet == 'cotadise-backend'
+        run: npm run build
+      - name: Construire le frontend
+        if: matrix.projet == 'cotadise-frontend'
+        run: npm run build
+      - name: Verifier le mobile
+        if: matrix.projet == 'cotadise-mobile'
+        run: npm run typecheck

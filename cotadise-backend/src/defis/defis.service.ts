@@ -176,19 +176,20 @@ export class DefisService {
 
     defi.status = 'termine';
     defi.completedAt = new Date();
-    defi.winner = challengerProgress >= 100 ? defi.challenger : defi.opponent;
+    const winner = challengerProgress >= 100 ? defi.challenger : defi.opponent;
+    defi.winner = winner;
     const savedDefi = await this.defisRepository.save(defi);
-    const loser = savedDefi.winner.id === savedDefi.challenger.id ? savedDefi.opponent : savedDefi.challenger;
+    const loser = winner.id === savedDefi.challenger.id ? savedDefi.opponent : savedDefi.challenger;
 
     await Promise.all([
-      this.notificationsService.notifyChallengeCompleted(savedDefi.winner, savedDefi.winner, loser, {
+      this.notificationsService.notifyChallengeCompleted(winner, winner, loser, {
         defiId: savedDefi.id,
-        winnerId: savedDefi.winner.id,
+        winnerId: winner.id,
         anneeAcademiqueId: savedDefi.anneeAcademique.id,
       }),
-      this.notificationsService.notifyChallengeCompleted(loser, savedDefi.winner, savedDefi.winner, {
+      this.notificationsService.notifyChallengeCompleted(loser, winner, winner, {
         defiId: savedDefi.id,
-        winnerId: savedDefi.winner.id,
+        winnerId: winner.id,
         anneeAcademiqueId: savedDefi.anneeAcademique.id,
       }),
     ]);
@@ -234,7 +235,7 @@ export class DefisService {
   }
 
   private ensureEligibleStudent(user: User) {
-    if (!user.isActive || user.accountStatus !== 'actif' || user.role === 'alumni') {
+    if (!user.isActive || user.accountStatus !== 'actif' || user.role !== 'etudiant') {
       throw new BadRequestException('Cet utilisateur n est pas eligible aux defis de cotisation');
     }
   }

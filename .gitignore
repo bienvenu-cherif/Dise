@@ -2,16 +2,23 @@
 cotadise-backend/node_modules/
 cotadise-backend/dist/
 cotadise-backend/.env
+backups/
 
 # Frontend
 cotadise-frontend/node_modules/
 cotadise-frontend/dist/
 cotadise-frontend/.env
+cotadise-mobile/.env
+cotadise-mobile/.env.local
+cotadise-mobile/node_modules/
+cotadise-mobile/.expo/
+.env
 
 # IDE
 .vscode/
 
 # Logs
 *.log 
+*.err
 
 

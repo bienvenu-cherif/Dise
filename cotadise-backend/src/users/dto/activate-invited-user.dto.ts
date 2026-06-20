@@ -2,6 +2,11 @@ import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, MinLength } from 'cl
 
 export class ActivateInvitedUserDto {
   @IsNotEmpty()
+  @IsString()
+  @Length(12, 12)
+  activationCode: string;
+
+  @IsNotEmpty()
   @IsEmail()
   email: string;
 

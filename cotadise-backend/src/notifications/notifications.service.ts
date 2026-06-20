@@ -66,11 +66,10 @@ export class NotificationsService {
 
     if (dto.promotionSortante) {
       const recipients = await this.usersRepository.find({
-        where: {
-          role: 'alumni',
-          promotionSortante: dto.promotionSortante,
-          isActive: true,
-        },
+        where: [
+          { role: 'alumni', promotionSortante: dto.promotionSortante, isActive: true },
+          { accountStatus: 'alumni', promotionSortante: dto.promotionSortante, isActive: true },
+        ],
       });
       const notifications: Notification[] = [];
       for (const recipient of recipients) {

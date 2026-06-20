@@ -15,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     const user = await this.authService.validateUserById(payload.sub);
-    if (!user) {
+    if (!user || !user.isActive || user.accountStatus === 'suspendu') {
       throw new UnauthorizedException();
     }
     return user;

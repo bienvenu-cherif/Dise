@@ -36,11 +36,33 @@ Pour etre eligible, l'etudiant doit appartenir a la liste officielle geree par l
 - La periode de cotisation demarre.
 - Les etudiants peuvent commencer a payer via Wave.
 
+Avant l'ouverture effective des paiements, le tresorier consulte le controle de preparation annuelle:
+
+- annee ouverte et active;
+- etudiants eligibles inscrits;
+- montants definis pour les niveaux concernes;
+- cotisations annuelles generees;
+- compte Wave marchand valide et actif pour l'annee.
+
+Si un point est incomplet, la campagne n'est pas consideree prete pour les paiements Wave.
+
 ### Fin aout
 
 - L'annee academique prend fin.
 - Les derniers etats financiers sont consolides.
 - Les donnees restent consultables comme historique.
+
+## Securite de la premiere activation
+
+L'import officiel reste limite aux colonnes `nom` et `prenom`. Le systeme genere ensuite un code d'activation individuel de 12 caracteres pour chaque invitation.
+
+- Le tresorier remet le code en prive a l'etudiant concerne.
+- Le code est stocke uniquement sous forme de hash.
+- Le code expire apres 120 jours.
+- Un code utilise est supprime lors de l'activation.
+- Le tresorier peut regenerer un code tant que le compte reste invite.
+
+Connaitre le nom d'un etudiant ne suffit donc plus pour prendre possession de son compte.
 - Le cycle suivant pourra etre prepare en octobre.
 
 ## Activation des nouveaux ISE1

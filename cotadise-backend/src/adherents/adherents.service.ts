@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as xlsx from 'xlsx';
+import { rowsToXlsxBuffer } from '../common/excel.helper';
 import { Adherent } from './adherent.entity';
 import { CreateAdherentDto } from './dto/create-adherent.dto';
 import { UpdateAdherentDto } from './dto/update-adherent.dto';
@@ -73,7 +73,7 @@ export class AdherentsService {
     }
     const adherents = await query.orderBy('adherent.createdAt', 'DESC').getMany();
 
-    const worksheet = xlsx.utils.json_to_sheet(
+    return rowsToXlsxBuffer(
       adherents.map((item) => ({
         'Adherent ID': item.id,
         'Membership Number': item.membershipNumber,
@@ -85,10 +85,7 @@ export class AdherentsService {
         'User Last Name': item.user?.lastName || '',
         'User Email': item.user?.email || '',
       })),
+      'Adherents',
     );
-
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Adherents');
-    return xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
   }
 }

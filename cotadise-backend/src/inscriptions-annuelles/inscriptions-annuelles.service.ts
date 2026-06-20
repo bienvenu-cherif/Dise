@@ -37,8 +37,7 @@ export class InscriptionsAnnuellesService {
       eligibleCotisation: dto.eligibleCotisation ?? this.isEligible(statutScolaire, level.name),
       commentaire: dto.commentaire,
     });
-    user.level = level;
-    user.role = level.name.toLowerCase() === 'alumni' ? 'alumni' : user.role;
+    await this.synchroniserUtilisateurAvecInscription(user, inscription);
     await this.usersRepository.save(user);
     return this.inscriptionsRepository.save(inscription);
   }
@@ -83,8 +82,7 @@ export class InscriptionsAnnuellesService {
       inscription.commentaire = dto.commentaire;
     }
     inscription.eligibleCotisation = dto.eligibleCotisation ?? this.isEligible(inscription.statutScolaire, inscription.level.name);
-    inscription.user.level = inscription.level;
-    inscription.user.role = inscription.level.name.toLowerCase() === 'alumni' ? 'alumni' : inscription.user.role;
+    await this.synchroniserUtilisateurAvecInscription(inscription.user, inscription);
     await this.usersRepository.save(inscription.user);
     return this.inscriptionsRepository.save(inscription);
   }
@@ -127,21 +125,27 @@ export class InscriptionsAnnuellesService {
         throw new BadRequestException(`Le niveau ${prochainNiveau} doit exister avant le passage automatique`);
       }
 
-      const statutScolaire: StatutScolaire = prochainNiveau.toLowerCase() === 'alumni' ? 'alumni' : source.statutScolaire === 'redoublant' ? 'redoublant' : 'actif';
+      const statutScolaire: StatutScolaire =
+        prochainNiveau.toLowerCase() === 'alumni'
+          ? 'alumni'
+          : ['redoublant', 'abandon', 'exclu'].includes(source.statutScolaire)
+            ? source.statutScolaire
+            : 'actif';
       const inscription = this.inscriptionsRepository.create({
         user: source.user,
         anneeAcademique: anneeCible,
         level,
         statutScolaire,
         eligibleCotisation: this.isEligible(statutScolaire, level.name),
-        commentaire: source.statutScolaire === 'redoublant' ? 'Passage automatique: redoublement conserve' : 'Passage automatique',
+        commentaire:
+          source.statutScolaire === 'redoublant'
+            ? 'Passage automatique: redoublement conserve'
+            : ['abandon', 'exclu'].includes(source.statutScolaire)
+              ? `Passage automatique: statut ${source.statutScolaire} conserve`
+              : 'Passage automatique',
       });
-      source.user.level = level;
-      source.user.role = level.name.toLowerCase() === 'alumni' ? 'alumni' : source.user.role;
       source.user.entrySource = 'passage_automatique';
-      if (level.name.toLowerCase() === 'alumni') {
-        source.user.promotionSortante = anneeCible.libelle;
-      }
+      await this.synchroniserUtilisateurAvecInscription(source.user, inscription);
       await this.usersRepository.save(source.user);
       created.push(await this.inscriptionsRepository.save(inscription));
     }
@@ -171,6 +175,44 @@ export class InscriptionsAnnuellesService {
       throw new NotFoundException(`Niveau avec id ${id} introuvable`);
     }
     return level;
+  }
+
+  private async synchroniserUtilisateurAvecInscription(user: User, inscription: InscriptionAnnuelle): Promise<void> {
+    const statut = inscription.statutScolaire;
+    const niveau = inscription.level.name.toLowerCase();
+
+    user.level = inscription.level;
+
+    if (statut === 'abandon' || statut === 'exclu') {
+      user.accountStatus = 'suspendu';
+      user.isActive = false;
+      if (user.role !== 'admin' && user.role !== 'tresorier') {
+        user.role = 'etudiant';
+      }
+      return;
+    }
+
+    if (statut === 'alumni' || niveau === 'alumni') {
+      const alumniLevel = niveau === 'alumni' ? inscription.level : await this.levelsRepository.findOne({ where: { name: 'alumni' } });
+      if (alumniLevel) {
+        user.level = alumniLevel;
+        inscription.level = alumniLevel;
+      }
+      user.role = 'alumni';
+      user.accountStatus = 'alumni';
+      user.isActive = true;
+      user.promotionSortante = user.promotionSortante ?? inscription.anneeAcademique.libelle;
+      inscription.statutScolaire = 'alumni';
+      inscription.eligibleCotisation = false;
+      return;
+    }
+
+    if (user.role === 'alumni' || user.accountStatus === 'alumni') {
+      user.promotionSortante = undefined;
+    }
+    user.role = 'etudiant';
+    user.accountStatus = 'actif';
+    user.isActive = true;
   }
 
   private getProchainNiveau(niveau: string, statutScolaire: StatutScolaire): string {

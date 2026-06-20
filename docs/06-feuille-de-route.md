@@ -46,7 +46,9 @@ Objectif:
 Taches:
 
 - Choisir la technologie mobile, probablement Expo React Native.
+- Creer une base Expo React Native compatible Android et iOS.
 - Creer l'authentification.
+- Creer le parcours d'activation mobile depuis la liste officielle importee.
 - Creer le tableau de bord.
 - Creer l'ecran paiement.
 - Creer l'historique.
@@ -58,6 +60,7 @@ Taches:
 - Preparer l'envoi email des alertes importantes.
 - Ajouter un controle tresorier pour relancer manuellement les rappels de l'annee active.
 - Brancher un fournisseur email sur la file d'envoi.
+- Configurer le stockage securise du token sur smartphone.
 
 ## Phase 4: Defis et dynamique sociale
 
@@ -106,3 +109,10 @@ Taches:
 - Preparer les environnements dev, test et production.
 - Securiser les secrets.
 - Preparer les sauvegardes de base de donnees.
+- Configurer EAS Build pour generer les versions Android et iOS.
+- Remplacer l'URL API de demonstration par l'URL HTTPS de production.
+- Ajouter les icones, l'ecran de demarrage et les assets officiels de publication.
+- Preparer la publication Android: APK de test, AAB Play Store et fiche Google Play.
+- Preparer la publication iOS: compte Apple Developer, TestFlight, certificats et fiche App Store.
+- Rediger la politique de confidentialite et les conditions d'utilisation.
+- Tester l'application sur Android reel, iPhone reel et simulateurs avant de publier.

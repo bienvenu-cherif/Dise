@@ -122,7 +122,9 @@ export class MontantsCotisationService {
     };
   }
 
-  private validateScope(dto: Pick<CreateMontantCotisationDto, 'type' | 'levelId' | 'userId'>): void {
+  private validateScope(
+    dto: Pick<CreateMontantCotisationDto, 'type' | 'levelId' | 'userId' | 'anneeAcademiqueId' | 'montant' | 'dateLimite' | 'commentaire'>,
+  ): void {
     if (dto.type === 'niveau' && !dto.levelId) {
       throw new BadRequestException('Un montant de type niveau doit avoir un levelId');
     }

@@ -1,5 +1,5 @@
 import { IsBoolean, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
-import { StatutScolaire } from '../inscription-annuelle.entity';
+import type { StatutScolaire } from '../inscription-annuelle.entity';
 
 export class CreateInscriptionAnnuelleDto {
   @IsUUID()

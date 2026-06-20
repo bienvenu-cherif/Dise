@@ -1,0 +1,53 @@
+services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-cotadise}
+      POSTGRES_USER: ${DATABASE_USER:-cotadise}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD requis}
+    volumes:
+      - cotadise_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-cotadise} -d ${DATABASE_NAME:-cotadise}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./cotadise-backend
+    restart: unless-stopped
+    env_file: ./cotadise-backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_HOST: database
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${DATABASE_USER:-cotadise}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME:-cotadise}
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./cotadise-frontend
+      args:
+        VITE_API_BASE: ${PUBLIC_API_BASE:-http://localhost:3000/api}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+
+volumes:
+  cotadise_postgres:

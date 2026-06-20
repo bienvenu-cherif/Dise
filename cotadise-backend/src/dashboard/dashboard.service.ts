@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as xlsx from 'xlsx';
+import { rowsToXlsxBuffer } from '../common/excel.helper';
 import { Cotisation } from '../cotisations/cotisation.entity';
 import { Paiement } from '../paiements/paiement.entity';
 import { AcademicLevel } from '../levels/academic-level.entity';
@@ -239,7 +239,7 @@ export class DashboardService {
 
   async generateOverdueExport(levelId?: string, anneeAcademiqueId?: string): Promise<Buffer> {
     const overdue = await this.getOverdueCotisations(levelId, anneeAcademiqueId);
-    const worksheet = xlsx.utils.json_to_sheet(overdue.map((item) => ({
+    return rowsToXlsxBuffer(overdue.map((item) => ({
       'Cotisation ID': item.id,
       Title: item.title,
       Amount: item.amount,
@@ -253,11 +253,7 @@ export class DashboardService {
       'Student Email': item.user.email,
       'Level ID': item.level?.id || '',
       'Level Name': item.level?.name || '',
-    })));
-
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Overdue');
-    return xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    })), 'Overdue');
   }
 
   async getLevelSummaries(anneeAcademiqueId?: string) {

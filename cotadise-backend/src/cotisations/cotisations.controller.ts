@@ -27,6 +27,13 @@ export class CotisationsController {
     return this.cotisationsService.generateAnnualCotisations(dto);
   }
 
+  @Get('generation-annuelle/previsualiser/:anneeId')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
+  previewAnnualCotisations(@Param('anneeId') anneeId: string) {
+    return this.cotisationsService.previewAnnualCotisations(anneeId);
+  }
+
   @Get('export')
   @UseGuards(RolesGuard)
   @Roles('admin', 'tresorier')
@@ -61,6 +68,11 @@ export class CotisationsController {
   @Get('me')
   findMyCotisations(@Req() req: any) {
     return this.cotisationsService.findForUser(req.user.id);
+  }
+
+  @Get('beneficiaire/:userId')
+  findBeneficiaryCotisations(@Param('userId') userId: string) {
+    return this.cotisationsService.findPayableForBeneficiary(userId);
   }
 
   @Get(':id')

@@ -8,7 +8,9 @@ const mockUser = {
   email: 'test@example.com',
   passwordHash: '$2b$10$invalidhash',
   role: 'etudiant',
+  accountStatus: 'actif',
   isActive: true,
+  level: { id: 'level-1', name: 'ISE1', annualAmount: 30000 },
 };
 
 describe('AuthService', () => {
@@ -19,9 +21,14 @@ describe('AuthService', () => {
   const jwtService = {
     sign: jest.fn().mockReturnValue('signed-token'),
   } as any;
+  const emailOutboxService = {
+    queueRawEmail: jest.fn(),
+  } as any;
 
   beforeEach(() => {
-    service = new AuthService(usersRepo, jwtService);
+    service = new AuthService(usersRepo, jwtService, emailOutboxService);
+    usersRepo.findOne.mockReset();
+    jwtService.sign.mockClear();
   });
 
   it('validateUser returns user when credentials are valid', async () => {
@@ -41,5 +48,6 @@ describe('AuthService', () => {
     expect(result).toHaveProperty('accessToken', 'signed-token');
     expect(result).toHaveProperty('user');
     expect(result.user.email).toBe('test@example.com');
+    expect(result.user.level?.name).toBe('ISE1');
   });
 });

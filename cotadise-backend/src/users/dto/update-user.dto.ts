@@ -10,12 +10,12 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
 
   @IsOptional()
   @IsString()
-  @IsIn(['invite', 'profil_a_completer', 'actif', 'suspendu'])
+  @IsIn(['invite', 'profil_a_completer', 'actif', 'suspendu', 'alumni'])
   accountStatus?: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(['import_officiel', 'passage_automatique', 'creation_manuelle'])
+  @IsIn(['import_officiel', 'passage_automatique', 'creation_manuelle', 'demo'])
   entrySource?: string;
 
   @IsOptional()

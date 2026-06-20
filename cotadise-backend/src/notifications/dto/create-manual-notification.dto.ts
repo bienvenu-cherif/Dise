@@ -1,5 +1,5 @@
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, Length } from 'class-validator';
-import { CanalNotification, TypeNotification } from '../notification.entity';
+import type { CanalNotification, TypeNotification } from '../notification.entity';
 
 export class CreateManualNotificationDto {
   @IsOptional()

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as xlsx from 'xlsx';
+import { rowsToXlsxBuffer } from '../common/excel.helper';
 import { AnneeAcademique } from '../annees-academiques/annee-academique.entity';
 import { InscriptionAnnuelle } from '../inscriptions-annuelles/inscription-annuelle.entity';
 import { MontantCotisation } from '../montants-cotisation/montant-cotisation.entity';
@@ -69,6 +69,25 @@ export class CotisationsService {
 
   findForUser(userId: string): Promise<Cotisation[]> {
     return this.cotisationsRepository.find({ where: { user: { id: userId } }, order: { dueDate: 'DESC' } });
+  }
+
+  async findPayableForBeneficiary(userId: string): Promise<Cotisation[]> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+    if (user.role !== 'etudiant' || user.accountStatus !== 'actif' || !user.isActive) {
+      throw new BadRequestException('Ce beneficiaire ne peut pas recevoir un paiement de cotisation');
+    }
+
+    return this.cotisationsRepository
+      .createQueryBuilder('cotisation')
+      .innerJoin('cotisation.user', 'user')
+      .where('user.id = :userId', { userId })
+      .andWhere('cotisation.paid = false')
+      .andWhere('cotisation.paidAmount < cotisation.amount')
+      .orderBy('cotisation.dueDate', 'DESC')
+      .getMany();
   }
 
   async generateAnnualCotisations(dto: GenerateAnnualCotisationsDto) {
@@ -141,6 +160,103 @@ export class CotisationsService {
     };
   }
 
+  async previewAnnualCotisations(anneeAcademiqueId: string) {
+    const annee = await this.anneesRepository.findOne({ where: { id: anneeAcademiqueId } });
+    if (!annee) {
+      throw new NotFoundException(`Annee academique avec id ${anneeAcademiqueId} introuvable`);
+    }
+
+    const inscriptions = await this.inscriptionsRepository.find({
+      where: { anneeAcademique: { id: annee.id } },
+      order: { level: { name: 'ASC' }, user: { lastName: 'ASC' } },
+    });
+
+    const lignes: Array<{
+      userId: string;
+      nom: string;
+      niveau: string;
+      statutScolaire: string;
+      eligibleCotisation: boolean;
+      montant: number;
+      dateLimite: string | null;
+      source: string;
+      statutGeneration: 'pret' | 'ignore' | 'deja_generee' | 'montant_manquant';
+      raison: string;
+    }> = [];
+
+    for (const inscription of inscriptions) {
+      const base = {
+        userId: inscription.user.id,
+        nom: `${inscription.user.firstName} ${inscription.user.lastName}`.trim(),
+        niveau: inscription.level.name,
+        statutScolaire: inscription.statutScolaire,
+        eligibleCotisation: inscription.eligibleCotisation,
+      };
+
+      if (!this.isStudentEligibleForAnnualCotisation(inscription)) {
+        lignes.push({
+          ...base,
+          montant: 0,
+          dateLimite: null,
+          source: 'non-eligible',
+          statutGeneration: 'ignore',
+          raison: 'Etudiant non eligible',
+        });
+        continue;
+      }
+
+      const existing = await this.cotisationsRepository.findOne({
+        where: { user: { id: inscription.user.id }, anneeAcademique: { id: annee.id } },
+      });
+      if (existing) {
+        lignes.push({
+          ...base,
+          montant: existing.amount,
+          dateLimite: existing.dueDate,
+          source: existing.sourceMontant ?? 'cotisation_existante',
+          statutGeneration: 'deja_generee',
+          raison: 'Cotisation deja generee',
+        });
+        continue;
+      }
+
+      const resolvedAmount = await this.resolveAnnualAmount(inscription, annee.id);
+      if (!resolvedAmount || resolvedAmount.montant <= 0) {
+        lignes.push({
+          ...base,
+          montant: 0,
+          dateLimite: null,
+          source: 'montant_manquant',
+          statutGeneration: 'montant_manquant',
+          raison: 'Aucun montant valide defini',
+        });
+        continue;
+      }
+
+      lignes.push({
+        ...base,
+        montant: resolvedAmount.montant,
+        dateLimite: resolvedAmount.dateLimite,
+        source: resolvedAmount.source,
+        statutGeneration: 'pret',
+        raison: 'Pret a generer',
+      });
+    }
+
+    return {
+      anneeAcademique: {
+        id: annee.id,
+        libelle: annee.libelle,
+      },
+      total: lignes.length,
+      pret: lignes.filter((item) => item.statutGeneration === 'pret').length,
+      dejaGenerees: lignes.filter((item) => item.statutGeneration === 'deja_generee').length,
+      ignorees: lignes.filter((item) => item.statutGeneration === 'ignore').length,
+      montantsManquants: lignes.filter((item) => item.statutGeneration === 'montant_manquant').length,
+      lignes,
+    };
+  }
+
   async findOne(id: string): Promise<Cotisation> {
     const cotisation = await this.cotisationsRepository.findOne({ where: { id } });
     if (!cotisation) {
@@ -191,7 +307,7 @@ export class CotisationsService {
     }
 
     const cotisations = await query.getMany();
-    const worksheet = xlsx.utils.json_to_sheet(
+    return rowsToXlsxBuffer(
       cotisations.map((item) => ({
         'Cotisation ID': item.id,
         Title: item.title,
@@ -209,10 +325,8 @@ export class CotisationsService {
         'User First Name': item.user?.firstName || '',
         'User Last Name': item.user?.lastName || '',
       })),
+      'Cotisations',
     );
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Cotisations');
-    return xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
   }
 
   private isStudentEligibleForAnnualCotisation(inscription: InscriptionAnnuelle): boolean {

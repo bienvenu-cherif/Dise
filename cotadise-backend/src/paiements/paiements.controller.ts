@@ -1,16 +1,23 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PaiementsService } from './paiements.service';
 import { CreatePaiementDto } from './dto/create-paiement.dto';
+import { InitiateWavePaiementDto } from './dto/initiate-wave-paiement.dto';
 import { UpdatePaiementDto } from './dto/update-paiement.dto';
+import { WaveWebhookDto } from './dto/wave-webhook.dto';
+import { WavePaiementsService } from './wave-paiements.service';
 
 @Controller('paiements')
 @UseGuards(JwtAuthGuard)
 export class PaiementsController {
-  constructor(private readonly paiementsService: PaiementsService) {}
+  constructor(
+    private readonly paiementsService: PaiementsService,
+    private readonly wavePaiementsService: WavePaiementsService,
+  ) {}
 
   @Post()
   create(@Req() req: any, @Body() createPaiementDto: CreatePaiementDto) {
@@ -34,6 +41,21 @@ export class PaiementsController {
     createPaiementDto.method = createPaiementDto.method || 'Especes';
     createPaiementDto.status = 'confirme';
     return this.paiementsService.create(createPaiementDto);
+  }
+
+  @Post('wave/initier')
+  initiateWave(@Req() req: any, @Body() dto: InitiateWavePaiementDto) {
+    return this.wavePaiementsService.initiate(req.user.id, dto);
+  }
+
+  @Public()
+  @Post('wave/webhook')
+  handleWaveWebhook(
+    @Body() dto: WaveWebhookDto | Record<string, unknown>,
+    @Headers('x-wave-signature') waveSignature?: string,
+    @Headers('wave-signature') legacyWaveSignature?: string,
+  ) {
+    return this.wavePaiementsService.handleWebhook(dto, waveSignature ?? legacyWaveSignature);
   }
 
   @Get('export')

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as xlsx from 'xlsx';
+import { rowsToXlsxBuffer } from '../common/excel.helper';
 import { User } from '../users/user.entity';
 import { DonAlumni } from './don-alumni.entity';
 import { CreateDonAlumniDto } from './dto/create-don-alumni.dto';
@@ -87,10 +87,7 @@ export class DonsService {
       'Enregistre par': don.recordedBy ? `${don.recordedBy.firstName} ${don.recordedBy.lastName}` : '',
     }));
 
-    const worksheet = xlsx.utils.json_to_sheet(rows);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Dons alumni');
-    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    return rowsToXlsxBuffer(rows, 'Dons alumni');
   }
 
   private async findAlumni(id: string): Promise<User> {

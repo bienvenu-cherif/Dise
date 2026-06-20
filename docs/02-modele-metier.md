@@ -54,6 +54,15 @@ Champs importants:
 - Date de generation des cotisations.
 - Date d'ouverture de la periode de cotisation, normalement en novembre.
 - Bureau ou tresorier responsable de l'annee.
+- Configuration Wave marchand rattachee a l'annee ou au bureau actif.
+- Statut de validation du compte marchand Wave.
+
+Regles importantes:
+
+- Chaque annee academique peut utiliser un compte Wave marchand different.
+- Les paiements d'une cotisation doivent toujours etre inities avec le compte marchand de l'annee academique de cette cotisation.
+- Quand un bureau change de compte marchand, l'historique des paiements des annees precedentes reste rattache aux anciens comptes.
+- Un nouveau compte marchand doit etre valide avant l'ouverture effective des cotisations Wave.
 
 ### Inscription annuelle
 
@@ -94,12 +103,15 @@ Champs importants:
 - Etudiant beneficiaire, c'est-a-dire celui dont la cotisation est ajustee.
 - Payeur reel: l'etudiant lui-meme, un camarade ou le tresorier dans le cas d'un paiement main a main.
 - Montant.
+- Montant applique a la cotisation.
 - Methode: Wave, espece, virement, autre.
 - Origine: paiement personnel, paiement pour camarade, paiement main a main, ajustement tresorier.
 - Reference transaction.
 - Statut: initie, en attente, confirme, echoue, annule.
 - Date du paiement.
+- Date d'application effective sur la cotisation.
 - Tresorier ayant enregistre le paiement si paiement main a main.
+- Configuration Wave marchand utilisee si paiement Wave.
 
 ### Notification
 
@@ -237,5 +249,10 @@ Champs importants:
 - Un paiement Wave ne doit etre considere valide qu'apres confirmation.
 - Un etudiant peut payer pour un camarade, mais le paiement doit clairement distinguer le payeur et le beneficiaire.
 - Un paiement main a main est enregistre par le tresorier et ajuste immediatement la cotisation du beneficiaire.
+- Un paiement ne peut pas viser une cotisation appartenant a un autre beneficiaire.
+- Un paiement ne peut pas etre cree sur une cotisation deja soldee.
+- Le montant initie ne doit pas depasser le reste a payer, sauf ajustement explicite du tresorier.
+- Le systeme garde le montant confirme et le montant reellement applique pour tracer les cas limites.
+- Un webhook repete ne doit jamais appliquer deux fois le meme paiement.
 - Les ISE3 qui passent alumni doivent etre rattaches a une promotion sortante pour permettre les messages cibles.
 - Les passages automatiques ne doivent pas ecraser les exceptions saisies par le tresorier.

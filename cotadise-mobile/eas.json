@@ -1,0 +1,42 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "http://localhost:3000/api",
+        "EXPO_PUBLIC_PRIVACY_URL": "http://localhost:5173/privacy.html",
+        "EXPO_PUBLIC_TERMS_URL": "http://localhost:5173/terms.html"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://api-cotadise.example.com/api",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://admin-cotadise.example.com/privacy.html",
+        "EXPO_PUBLIC_TERMS_URL": "https://admin-cotadise.example.com/terms.html"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://api-cotadise.example.com/api",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://admin-cotadise.example.com/privacy.html",
+        "EXPO_PUBLIC_TERMS_URL": "https://admin-cotadise.example.com/terms.html"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

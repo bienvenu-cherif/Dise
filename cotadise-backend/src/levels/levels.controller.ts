@@ -8,12 +8,13 @@ import { UpdateAcademicLevelDto } from './dto/update-academic-level.dto';
 import { GenerateAcademicLevelCotisationsDto } from './dto/generate-academic-level-cotisations.dto';
 
 @Controller('levels')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'tresorier')
+@UseGuards(JwtAuthGuard)
 export class LevelsController {
   constructor(private readonly levelsService: LevelsService) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
   create(@Body() createAcademicLevelDto: CreateAcademicLevelDto) {
     return this.levelsService.create(createAcademicLevelDto);
   }
@@ -29,6 +30,8 @@ export class LevelsController {
   }
 
   @Post(':id/generate-cotisations')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
   generateCotisations(
     @Param('id') id: string,
     @Body() generateAcademicLevelCotisationsDto: GenerateAcademicLevelCotisationsDto,
@@ -37,11 +40,15 @@ export class LevelsController {
   }
 
   @Put(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
   update(@Param('id') id: string, @Body() updateAcademicLevelDto: UpdateAcademicLevelDto) {
     return this.levelsService.update(id, updateAcademicLevelDto);
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
   remove(@Param('id') id: string) {
     return this.levelsService.remove(id);
   }

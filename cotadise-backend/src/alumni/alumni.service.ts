@@ -15,7 +15,10 @@ export class AlumniService {
 
   findAll(): Promise<User[]> {
     return this.usersRepository.find({
-      where: { role: 'alumni', isActive: true },
+      where: [
+        { role: 'alumni', isActive: true },
+        { accountStatus: 'alumni', isActive: true },
+      ],
       order: { promotionSortante: 'DESC', lastName: 'ASC', firstName: 'ASC' },
     });
   }
@@ -37,7 +40,10 @@ export class AlumniService {
 
   async findPromotion(promotion: string) {
     const alumni = await this.usersRepository.find({
-      where: { role: 'alumni', promotionSortante: promotion, isActive: true },
+      where: [
+        { role: 'alumni', promotionSortante: promotion, isActive: true },
+        { accountStatus: 'alumni', promotionSortante: promotion, isActive: true },
+      ],
       order: { lastName: 'ASC', firstName: 'ASC' },
     });
 

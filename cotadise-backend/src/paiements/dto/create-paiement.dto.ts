@@ -1,8 +1,9 @@
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class CreatePaiementDto {
   @IsNotEmpty()
   @IsNumber()
+  @Min(1)
   amount: number;
 
   @IsOptional()
@@ -28,6 +29,10 @@ export class CreatePaiementDto {
   @IsOptional()
   @IsUUID()
   recordedById?: string;
+
+  @IsOptional()
+  @IsUUID()
+  waveConfigurationId?: string;
 
   @IsOptional()
   @IsIn(['initie', 'en_attente', 'confirme', 'echoue', 'annule'])

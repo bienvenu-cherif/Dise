@@ -9,7 +9,7 @@ export class EmailMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Notification, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Notification, { eager: true, nullable: true, onDelete: 'SET NULL' })
   notification?: Notification;
 
   @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })

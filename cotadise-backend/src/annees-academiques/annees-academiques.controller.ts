@@ -35,6 +35,12 @@ export class AnneesAcademiquesController {
     return this.anneesService.findOne(id);
   }
 
+  @Get(':id/preparation')
+  @Roles('admin', 'tresorier')
+  getPreparation(@Param('id') id: string) {
+    return this.anneesService.getPreparation(id);
+  }
+
   @Patch(':id')
   @Roles('admin', 'tresorier')
   update(@Param('id') id: string, @Body() dto: UpdateAnneeAcademiqueDto) {

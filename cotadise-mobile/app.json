@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "CotaDISE",
+    "slug": "cotadise-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "cotadise",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1f1c5b"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.dise.cotadise"
+    },
+    "android": {
+      "package": "com.dise.cotadise",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiBase": "http://localhost:3000/api"
+    }
+  }
+}
