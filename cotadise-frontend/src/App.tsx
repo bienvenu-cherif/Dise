@@ -392,6 +392,12 @@ const request = async <T,>(path: string, token: string, init: RequestInit = {}) 
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null)
+    if (response.status === 401 && token) {
+      localStorage.removeItem('cotadise_token')
+      localStorage.removeItem('cotadise_user')
+      window.dispatchEvent(new Event('cotadise:session-expired'))
+      throw new Error('Votre session a expire. Veuillez vous reconnecter.')
+    }
     throw new Error(payload?.message || response.statusText)
   }
 
@@ -1014,6 +1020,16 @@ function App() {
     localStorage.removeItem('cotadise_token')
     localStorage.removeItem('cotadise_user')
   }
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setToken('')
+      setUser(null)
+      setNotice({ kind: 'error', message: 'Votre session a expire. Veuillez vous reconnecter.' })
+    }
+    window.addEventListener('cotadise:session-expired', handleSessionExpired)
+    return () => window.removeEventListener('cotadise:session-expired', handleSessionExpired)
+  }, [])
 
   const createLevel = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
