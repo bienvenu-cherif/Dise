@@ -28,7 +28,9 @@ la propriete de l'infrastructure.
 1. Dans Render, choisir `New > Blueprint`.
 2. Connecter le depot GitHub et selectionner `render.yaml`.
 3. Choisir une region unique pour la base et l'API.
-4. Choisir des offres payantes avec persistance et sauvegardes pour la production.
+4. Le Blueprint utilise les offres gratuites pour la recette initiale. Passer ensuite
+   PostgreSQL et l'API sur des offres payantes avec persistance et sauvegardes avant
+   l'ouverture officielle aux etudiants.
 5. Renseigner les trois valeurs demandees pendant la creation :
 
 ```text

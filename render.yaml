@@ -2,11 +2,13 @@ databases:
   - name: cotadise-postgresql
     databaseName: cotadise
     user: cotadise
+    plan: free
 
 services:
   - type: web
     name: cotadise-api
     runtime: docker
+    plan: free
     rootDir: cotadise-backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
@@ -43,6 +45,7 @@ services:
   - type: web
     name: cotadise-admin
     runtime: static
+    plan: free
     rootDir: cotadise-frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
