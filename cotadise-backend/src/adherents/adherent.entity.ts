@@ -6,7 +6,7 @@ export class Adherent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, length: 50 })
+  @Column({ name: 'membership_number', unique: true, length: 50 })
   membershipNumber: string;
 
   @OneToOne(() => User, { eager: true })
