@@ -86,6 +86,8 @@ type EmailMessage = {
 }
 
 type StudentImportResult = {
+  firstName?: string
+  lastName?: string
   email: string
   activationCode?: string
   status: string
@@ -1248,6 +1250,12 @@ function App() {
       })
       setStudentImportResults(results)
       setImportFile(null)
+      if (results.some(item => item.status === 'created')) {
+        setUserSearchQuery('')
+        setUserRoleFilter('etudiant')
+        setUserStatusFilter('invite')
+        setUserLevelFilter(levels.find(level => level.name.toUpperCase() === 'ISE1')?.id ?? '')
+      }
     })
   }
 
@@ -2528,11 +2536,17 @@ function App() {
                             <strong>Codes d activation prives</strong>
                             <span>Distribuez chaque code uniquement a l'etudiant concerne. Le code n'est plus recuperable apres fermeture de cette page; il pourra etre regenere si necessaire.</span>
                           </div>
+                          <div className="panel-metrics">
+                            <PanelMetric label="Importes" value={studentImportResults.filter(item => item.status === 'created').length} />
+                            <PanelMetric label="Ignores" value={studentImportResults.filter(item => item.status === 'skipped').length} />
+                            <PanelMetric label="Erreurs" value={studentImportResults.filter(item => item.status === 'error').length} />
+                          </div>
                           <table>
-                            <thead><tr><th>Invitation</th><th>Statut</th><th>Code</th></tr></thead>
+                            <thead><tr><th>Etudiant</th><th>Invitation</th><th>Statut</th><th>Code</th></tr></thead>
                             <tbody>
                               {studentImportResults.map((item, index) => (
                                 <tr key={`${item.email}-${index}`}>
+                                  <td>{`${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || '-'}</td>
                                   <td>{item.email}</td>
                                   <td>{item.status}</td>
                                   <td><strong>{item.activationCode ?? item.message ?? '-'}</strong></td>
@@ -2540,6 +2554,13 @@ function App() {
                               ))}
                             </tbody>
                           </table>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => document.getElementById('liste-utilisateurs')?.scrollIntoView({ behavior: 'smooth' })}
+                          >
+                            Voir les etudiants importes
+                          </button>
                         </div>
                       )}
                     </form>
@@ -2625,6 +2646,7 @@ function App() {
                     </form>
                   </div>
 
+                  <div id="liste-utilisateurs">
                   <DataPanel title="Utilisateurs">
                     {lastActivationCode && (
                       <div className="form-hint secure activation-code-banner">
@@ -2706,6 +2728,7 @@ function App() {
                       </tbody>
                     </table>
                   </DataPanel>
+                  </div>
                 </section>
               </>
             )}

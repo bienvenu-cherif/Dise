@@ -51,10 +51,10 @@ export class UsersService {
     return saved;
   }
 
-  async importFromExcel(file: Express.Multer.File): Promise<Array<{ email: string; password: string; activationCode?: string; status: string; message?: string }>> {
+  async importFromExcel(file: Express.Multer.File): Promise<Array<{ firstName?: string; lastName?: string; email: string; password: string; activationCode?: string; status: string; message?: string }>> {
     const rows = await xlsxBufferToRows(file.buffer);
 
-    const results: Array<{ email: string; password: string; activationCode?: string; status: string; message?: string }> = [];
+    const results: Array<{ firstName?: string; lastName?: string; email: string; password: string; activationCode?: string; status: string; message?: string }> = [];
     const defaultIse1Level = await this.levelsRepository.findOne({ where: { name: 'ISE1' } });
     if (!defaultIse1Level) {
       throw new BadRequestException('Le niveau ISE1 doit exister avant l import officiel');
@@ -77,6 +77,8 @@ export class UsersService {
 
       if (!firstName || !lastName) {
         results.push({
+          firstName,
+          lastName,
           email: email || '<missing>',
           password,
           status: 'skipped',
@@ -94,6 +96,8 @@ export class UsersService {
         .getOne();
       if (duplicateInvite) {
         results.push({
+          firstName,
+          lastName,
           email: duplicateInvite.email,
           password,
           status: 'skipped',
@@ -104,7 +108,7 @@ export class UsersService {
 
       const existingUser = await this.usersRepository.findOne({ where: { email } });
       if (existingUser) {
-        results.push({ email, password, status: 'skipped', message: 'Email already exists' });
+        results.push({ firstName, lastName, email, password, status: 'skipped', message: 'Email already exists' });
         continue;
       }
 
@@ -112,7 +116,7 @@ export class UsersService {
       if (levelName) {
         const existingLevel = await this.levelsRepository.findOne({ where: { name: levelName } });
         if (!existingLevel) {
-          results.push({ email, password, status: 'skipped', message: `Academic level '${levelName}' not found` });
+          results.push({ firstName, lastName, email, password, status: 'skipped', message: `Academic level '${levelName}' not found` });
           continue;
         }
         levelId = existingLevel.id;
@@ -134,9 +138,9 @@ export class UsersService {
           role,
           activationCode,
         );
-        results.push({ email, password, activationCode, status: 'created' });
+        results.push({ firstName, lastName, email, password, activationCode, status: 'created' });
       } catch (error: any) {
-        results.push({ email, password, status: 'error', message: error.message });
+        results.push({ firstName, lastName, email, password, status: 'error', message: error.message });
       }
     }
 
