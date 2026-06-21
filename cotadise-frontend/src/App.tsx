@@ -1320,17 +1320,24 @@ function App() {
 
   const createPayment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const selectedCotisation = cotisations.find(item => item.id === paymentForm.cotisationId)
+    const beneficiaryId = selectedCotisation?.user?.id
+    if (!selectedCotisation || !beneficiaryId) {
+      setNotice({ kind: 'error', message: 'Choisissez une cotisation valide avant d enregistrer le paiement' })
+      return
+    }
     runAction('Paiement enregistre', async () => {
-      await request('/paiements', token, {
+      await request('/paiements/main-a-main', token, {
         method: 'POST',
         body: JSON.stringify({
-          ...paymentForm,
+          cotisationId: selectedCotisation.id,
+          userId: beneficiaryId,
           amount: Number(paymentForm.amount),
+          method: paymentForm.method,
           reference: paymentForm.reference || undefined,
-          userId: paymentForm.userId || undefined,
         }),
       })
-      setPaymentForm({ amount: '', method: 'Wave', reference: '', cotisationId: '', userId: '' })
+      setPaymentForm({ amount: '', method: 'Especes', reference: '', cotisationId: '', userId: '' })
     })
   }
 
@@ -3008,7 +3015,14 @@ function App() {
                       <span>Utilisez ce formulaire pour les especes ou corrections validees par le bureau. Les paiements Wave confirmes arrivent normalement par webhook.</span>
                     </div>
                     <label>Cotisation
-                    <select value={paymentForm.cotisationId} onChange={e => setPaymentForm({ ...paymentForm, cotisationId: e.target.value })} required>
+                    <select
+                      value={paymentForm.cotisationId}
+                      onChange={e => {
+                        const cotisation = cotisations.find(item => item.id === e.target.value)
+                        setPaymentForm({ ...paymentForm, cotisationId: e.target.value, userId: cotisation?.user?.id ?? '' })
+                      }}
+                      required
+                    >
                       <option value="">Choisir</option>
                       {cotisations.map(item => <option key={item.id} value={item.id}>{item.title} - {getFullName(item.user)}</option>)}
                     </select>
