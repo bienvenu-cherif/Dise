@@ -47,26 +47,46 @@ export class SeedService implements OnModuleInit {
     await this.seedDefaultLevels();
     await this.seedDemoData();
 
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@cotadise.local');
-    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD', 'Admin123!');
-
-    const existingAdmin = await this.usersService.findByEmail(adminEmail);
-    if (existingAdmin) {
-      this.logger.log(`Admin user already exists: ${adminEmail}`);
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const configuredAdminEmail = this.configService.get<string>('ADMIN_EMAIL')?.trim().toLowerCase();
+    const configuredAdminPassword = this.configService.get<string>('ADMIN_PASSWORD');
+    if (isProduction && (!configuredAdminEmail || !configuredAdminPassword)) {
+      this.logger.warn('ADMIN_EMAIL et ADMIN_PASSWORD requis pour creer le premier administrateur');
       return;
     }
 
-    this.logger.log(`Creating initial admin user: ${adminEmail}`);
-    await this.usersService.create(
-      {
-        firstName: 'Admin',
-        lastName: 'User',
-        email: adminEmail,
-        password: adminPassword,
-      },
-      'admin',
-    );
-    this.logger.log('Initial admin user created successfully');
+    const adminEmail = configuredAdminEmail || 'admin@cotadise.local';
+    const adminPassword = configuredAdminPassword || 'Admin123!';
+    if (isProduction && adminPassword.length < 12) {
+      throw new Error('ADMIN_PASSWORD doit contenir au moins 12 caracteres en production');
+    }
+
+    const existingAdmin = await this.usersService.findByEmail(adminEmail);
+    if (!existingAdmin) {
+      this.logger.log(`Creating initial admin user: ${adminEmail}`);
+      await this.usersService.create(
+        {
+          firstName: 'Administrateur',
+          lastName: 'CotaDISE',
+          email: adminEmail,
+          password: adminPassword,
+        },
+        'admin',
+      );
+      this.logger.log('Initial admin user created successfully');
+    } else {
+      this.logger.log(`Admin user already exists: ${adminEmail}`);
+    }
+
+    if (isProduction && adminEmail !== 'admin@cotadise.local') {
+      const legacyAdmin = await this.usersService.findByEmail('admin@cotadise.local');
+      if (legacyAdmin?.isActive) {
+        legacyAdmin.isActive = false;
+        legacyAdmin.accountStatus = 'suspendu';
+        await this.usersRepository.save(legacyAdmin);
+        this.logger.warn('Ancien compte administrateur technique suspendu');
+      }
+    }
   }
 
   private async seedDefaultLevels(): Promise<void> {

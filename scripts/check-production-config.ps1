@@ -76,6 +76,17 @@ foreach ($secretKey in @("JWT_SECRET", "APP_SECRET", "WAVE_CONFIG_ENCRYPTION_KEY
   }
 }
 
+if (Is-Missing $envValues "ADMIN_EMAIL") {
+  Add-Check "ADMIN_EMAIL" "ECHEC" "Adresse du premier administrateur manquante"
+} else {
+  Add-Check "ADMIN_EMAIL" "OK" $envValues["ADMIN_EMAIL"]
+}
+if ((Is-Missing $envValues "ADMIN_PASSWORD") -or $envValues["ADMIN_PASSWORD"].Length -lt 12 -or (Is-Placeholder $envValues["ADMIN_PASSWORD"])) {
+  Add-Check "ADMIN_PASSWORD" "ECHEC" "Mot de passe administrateur absent, trop court ou de demonstration"
+} else {
+  Add-Check "ADMIN_PASSWORD" "OK" "Mot de passe administrateur configure"
+}
+
 if ($envValues["DEMO_SEED_ENABLED"] -eq "true" -and -not $AllowDemo) {
   Add-Check "DEMO_SEED_ENABLED" "ECHEC" "Desactiver les donnees demo en production"
 } else {

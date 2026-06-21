@@ -31,13 +31,19 @@ la propriete de l'infrastructure.
 4. Le Blueprint utilise les offres gratuites pour la recette initiale. Passer ensuite
    PostgreSQL et l'API sur des offres payantes avec persistance et sauvegardes avant
    l'ouverture officielle aux etudiants.
-5. Renseigner les trois valeurs demandees pendant la creation :
+5. Renseigner les cinq valeurs demandees pendant la creation :
 
 ```text
 PUBLIC_BACKEND_URL=https://cotadise-api.onrender.com
 CORS_ORIGINS=https://cotadise-admin.onrender.com
 VITE_API_BASE=https://cotadise-api.onrender.com/api
+ADMIN_EMAIL=adresse email institutionnelle du premier administrateur
+ADMIN_PASSWORD=mot de passe robuste de 12 caracteres minimum
 ```
+
+Le mot de passe administrateur est un secret. Ne pas le placer dans Git, une capture
+d'ecran ou un message partage. Apres la premiere connexion, creer le futur tresorier
+et utiliser la passation de bureau selon la procedure prevue.
 
 Les URL exactes peuvent differer si les noms Render sont deja utilises. Garder
 `EMAIL_DISPATCH_ENABLED=false` jusqu'au test SMTP.
