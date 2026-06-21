@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { xlsxBufferToRows } from '../common/excel.helper';
@@ -477,10 +477,41 @@ export class UsersService {
     return { success: true };
   }
 
-  async remove(id: string): Promise<void> {
-    const result = await this.usersRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`User with id ${id} not found`);
+  async remove(id: string, actorId: string): Promise<void> {
+    if (id === actorId) {
+      throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte');
     }
+    const user = await this.findOne(id);
+    if (user.entrySource !== 'import_officiel' || !['invite', 'profil_a_completer'].includes(user.accountStatus)) {
+      throw new BadRequestException('Seule une invitation importee non activee peut etre supprimee. Suspendez les autres comptes pour conserver l historique');
+    }
+    await this.usersRepository.delete(id);
+    await this.auditService.record({
+      action: 'suppression_invitation',
+      entityType: 'users',
+      entityId: id,
+      actorId,
+      details: { firstName: user.firstName, lastName: user.lastName, email: user.email },
+    });
+  }
+
+  async removePendingInvites(actorId: string): Promise<{ deleted: number }> {
+    const invites = await this.usersRepository.find({
+      where: {
+        entrySource: 'import_officiel',
+        accountStatus: In(['invite', 'profil_a_completer']),
+      },
+    });
+    if (!invites.length) {
+      return { deleted: 0 };
+    }
+    await this.usersRepository.delete({ id: In(invites.map((item) => item.id)) });
+    await this.auditService.record({
+      action: 'suppression_invitations_en_attente',
+      entityType: 'users',
+      actorId,
+      details: { deleted: invites.length },
+    });
+    return { deleted: invites.length };
   }
 }

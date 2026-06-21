@@ -1268,6 +1268,27 @@ function App() {
     })
   }
 
+  const deleteInvitedUser = (item: User) => {
+    if (!window.confirm(`Supprimer l invitation de ${getFullName(item)} ?`)) return
+    runAction('Invitation supprimee', async () => {
+      await request(`/users/${item.id}`, token, { method: 'DELETE' })
+      setStudentImportResults(results => results.filter(result => result.email !== item.email))
+    })
+  }
+
+  const deleteAllPendingInvites = () => {
+    const count = users.filter(item => item.entrySource === 'import_officiel' && ['invite', 'profil_a_completer'].includes(item.accountStatus ?? '')).length
+    if (!count) {
+      setNotice({ kind: 'error', message: 'Aucune invitation importee en attente' })
+      return
+    }
+    if (!window.confirm(`Supprimer les ${count} invitations non activees ? Les comptes actifs seront conserves.`)) return
+    runAction('Invitations en attente supprimees', async () => {
+      await request('/users/invites/en-attente', token, { method: 'DELETE' })
+      setStudentImportResults([])
+    })
+  }
+
   const handleDownload = (path: string, filename: string) => {
     runAction('Export prepare', () => downloadFile(path, token, filename))
   }
@@ -2529,7 +2550,10 @@ function App() {
                         <span>Colonnes attendues: nom et prenom. Le niveau est automatiquement ISE1; l'etudiant ajoute son email, son telephone et son mot de passe pendant l'activation mobile.</span>
                       </div>
                       <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setImportFile(e.target.files?.[0] ?? null)} />
-                      <button type="submit" className="cta">Importer la liste</button>
+                      <div className="table-actions">
+                        <button type="submit" className="cta">Importer la liste</button>
+                        <button type="button" className="ghost danger-cta" onClick={deleteAllPendingInvites}>Supprimer les invitations en attente</button>
+                      </div>
                       {!!studentImportResults.length && (
                         <div className="generation-report">
                           <div className="form-hint secure">
@@ -2719,7 +2743,10 @@ function App() {
                               <div className="table-actions">
                                 <button type="button" className="ghost compact" onClick={() => selectUserForEdit(item)}>Modifier</button>
                                 {item.entrySource === 'import_officiel' && ['invite', 'profil_a_completer'].includes(item.accountStatus ?? '') && (
-                                  <button type="button" className="ghost compact" onClick={() => regenerateActivationCode(item)}>Nouveau code</button>
+                                  <>
+                                    <button type="button" className="ghost compact" onClick={() => regenerateActivationCode(item)}>Nouveau code</button>
+                                    <button type="button" className="ghost compact danger-cta" onClick={() => deleteInvitedUser(item)}>Supprimer</button>
+                                  </>
                                 )}
                               </div>
                             </td>

@@ -79,6 +79,13 @@ export class UsersController {
     return this.usersService.passationBureau(dto, req.user.id);
   }
 
+  @Delete('invites/en-attente')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'tresorier')
+  removePendingInvites(@Req() req: any) {
+    return this.usersService.removePendingInvites(req.user.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'tresorier')
@@ -96,7 +103,7 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'tresorier')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.usersService.remove(id, req.user.id);
   }
 }
