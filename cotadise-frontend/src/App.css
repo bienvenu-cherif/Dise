@@ -674,6 +674,34 @@ button {
 .selected-invite span { color: #64748b; font-size: 0.82rem; }
 .selected-invite strong { color: #1f1c5b; }
 
+.notification-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-item {
+  background: #ecfeff;
+  border-left: 4px solid #22a6cf;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.notification-item.read {
+  background: #f8fafc;
+  border-left-color: #cbd5e1;
+}
+
+.notification-item > div {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.notification-item strong { color: #1f1c5b; }
+.notification-item span { color: #64748b; font-size: 0.78rem; }
+.notification-item p { color: #334155; margin: 8px 0; }
+
 .section-header strong {
   color: #22a6cf;
   font-size: 2rem;

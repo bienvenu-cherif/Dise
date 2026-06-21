@@ -94,6 +94,15 @@ type StudentImportResult = {
   message?: string
 }
 
+type StudentNotification = {
+  id: string
+  type: string
+  title: string
+  message: string
+  read: boolean
+  createdAt: string
+}
+
 type AcademicYearPreparation = {
   pretPaiements: boolean
   score: number
@@ -449,6 +458,7 @@ function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
   const [pendingEmails, setPendingEmails] = useState<EmailMessage[]>([])
+  const [studentNotifications, setStudentNotifications] = useState<StudentNotification[]>([])
   const [dons, setDons] = useState<DonAlumni[]>([])
   const [promotionsAlumni, setPromotionsAlumni] = useState<PromotionAlumni[]>([])
   const [defis, setDefis] = useState<Defi[]>([])
@@ -859,9 +869,10 @@ function App() {
         request<StudentRanking>('/dashboard/rankings/me', token),
         request<Defi[]>('/defis/me', token),
         request<Level[]>('/levels', token),
+        request<StudentNotification[]>('/notifications/me', token),
       ])
 
-      const [summaryResult, cotisationsResult, paiementsResult, rankingResult, defisResult, levelsResult] = results
+      const [summaryResult, cotisationsResult, paiementsResult, rankingResult, defisResult, levelsResult, notificationsResult] = results
       if (summaryResult.status === 'fulfilled') {
         setStudentSummary(summaryResult.value)
         setUser(summaryResult.value.user)
@@ -875,6 +886,7 @@ function App() {
       }
       if (defisResult.status === 'fulfilled') setDefis(defisResult.value)
       if (levelsResult.status === 'fulfilled') setLevels(levelsResult.value)
+      if (notificationsResult.status === 'fulfilled') setStudentNotifications(notificationsResult.value)
 
       const rejected = results.find(result => result.status === 'rejected') as PromiseRejectedResult | undefined
       if (rejected) {
@@ -1021,6 +1033,7 @@ function App() {
     setPaiements([])
     setEmailStatus(null)
     setPendingEmails([])
+    setStudentNotifications([])
     setStudentImportResults([])
     setLastActivationCode(null)
     setDons([])
@@ -1479,6 +1492,12 @@ function App() {
       setStudentChallengeResults([])
       setStudentChallengeOpponent(null)
       setStudentChallengeMessage('')
+    })
+  }
+
+  const markNotificationRead = (notificationId: string) => {
+    runAction('Message marque comme lu', async () => {
+      await request(`/notifications/${notificationId}/lire`, token, { method: 'PATCH' })
     })
   }
 
@@ -1953,6 +1972,26 @@ function App() {
               </DataPanel>
             </section>
 
+            <section className="two-column">
+            <DataPanel
+              title="Mes messages"
+              action={<span className="level-chip">{studentNotifications.filter(item => !item.read).length} non lu(s)</span>}
+            >
+              <div className="notification-list">
+                {!studentNotifications.length && <p className="muted">Aucun message pour le moment.</p>}
+                {studentNotifications.slice(0, 12).map(item => (
+                  <article key={item.id} className={item.read ? 'notification-item read' : 'notification-item'}>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{new Date(item.createdAt).toLocaleString('fr-FR')}</span>
+                    </div>
+                    <p>{item.message}</p>
+                    {!item.read && <button type="button" className="ghost compact" onClick={() => markNotificationRead(item.id)}>Marquer comme lu</button>}
+                  </article>
+                ))}
+              </div>
+            </DataPanel>
+
             <DataPanel title="Mes paiements">
               <table>
                 <thead><tr><th>Cotisation</th><th>Montant</th><th>Methode</th><th>Reference</th><th>Date</th></tr></thead>
@@ -1969,6 +2008,7 @@ function App() {
                 </tbody>
               </table>
             </DataPanel>
+            </section>
           </>
         ) : (
           <>
