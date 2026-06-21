@@ -456,8 +456,19 @@ function App() {
   const [rankings, setRankings] = useState<Ranking[]>([])
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
-  const [email, setEmail] = useState('admin@cotadise.local')
-  const [password, setPassword] = useState('Admin123!')
+  const [authMode, setAuthMode] = useState<'connexion' | 'activation'>('connexion')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [activationQuery, setActivationQuery] = useState('')
+  const [activationResults, setActivationResults] = useState<User[]>([])
+  const [selectedInvite, setSelectedInvite] = useState<User | null>(null)
+  const [activationForm, setActivationForm] = useState({
+    activationCode: '',
+    email: '',
+    phone: '',
+    wavePhone: '',
+    password: '',
+  })
   const [levelForm, setLevelForm] = useState({ name: '', description: '', annualAmount: '' })
   const [academicYearForm, setAcademicYearForm] = useState({ libelle: '', dateDebut: '', dateFin: '' })
   const [amountForm, setAmountForm] = useState({
@@ -1019,6 +1030,69 @@ function App() {
     setRankings([])
     localStorage.removeItem('cotadise_token')
     localStorage.removeItem('cotadise_user')
+  }
+
+  const searchInvitedStudents = async () => {
+    if (activationQuery.trim().length < 2) {
+      setNotice({ kind: 'error', message: 'Saisissez au moins 2 caracteres du nom ou du prenom.' })
+      return
+    }
+    setLoading(true)
+    setNotice(null)
+    try {
+      const results = await request<User[]>(`/users/invites/recherche?q=${encodeURIComponent(activationQuery.trim())}`, '')
+      setActivationResults(results)
+      if (!results.length) setNotice({ kind: 'error', message: 'Aucune invitation ne correspond a cette recherche.' })
+    } catch (err: any) {
+      setNotice({ kind: 'error', message: err.message || 'Recherche impossible' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const chooseInvite = (invite: User) => {
+    setSelectedInvite(invite)
+    setActivationForm({
+      activationCode: '',
+      email: invite.email.endsWith('@cotadise.local') ? '' : invite.email,
+      phone: '',
+      wavePhone: '',
+      password: '',
+    })
+    setNotice(null)
+  }
+
+  const activateStudentAccount = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedInvite) {
+      setNotice({ kind: 'error', message: 'Recherchez puis selectionnez votre nom.' })
+      return
+    }
+    setLoading(true)
+    setNotice(null)
+    try {
+      await request(`/users/invites/${selectedInvite.id}/activer`, '', {
+        method: 'POST',
+        body: JSON.stringify({
+          activationCode: activationForm.activationCode.trim().toUpperCase(),
+          email: activationForm.email.trim().toLowerCase(),
+          phone: activationForm.phone.trim(),
+          wavePhone: activationForm.wavePhone.trim() || activationForm.phone.trim(),
+          password: activationForm.password,
+        }),
+      })
+      setEmail(activationForm.email.trim().toLowerCase())
+      setPassword('')
+      setAuthMode('connexion')
+      setSelectedInvite(null)
+      setActivationResults([])
+      setActivationQuery('')
+      setNotice({ kind: 'success', message: 'Compte active. Connectez-vous avec votre email et votre mot de passe.' })
+    } catch (err: any) {
+      setNotice({ kind: 'error', message: err.message || 'Activation impossible' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -1604,31 +1678,75 @@ function App() {
         {!isConnected ? (
           <section className="login-layout">
             <div className="login-copy">
-              <span className="eyebrow">Administration</span>
-              <h1>Suivre, relancer et encaisser les cotisations sans tableur disperse.</h1>
+              <span className="eyebrow">{authMode === 'connexion' ? 'Connexion securisee' : 'Activation etudiant'}</span>
+              <h1>{authMode === 'connexion' ? 'Suivre, relancer et encaisser les cotisations sans tableur disperse.' : 'Activez votre espace CotaDISE depuis la liste officielle.'}</h1>
               <p>
-                Connectez-vous pour piloter les niveaux, les etudiants, les paiements et les exports financiers.
+                {authMode === 'connexion'
+                  ? 'Etudiants et gestionnaires retrouvent ici leur espace personnel.'
+                  : 'Recherchez votre nom, utilisez le code prive transmis par le tresorier et completez vos coordonnees.'}
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="panel login-form">
-              <label>
-                Email
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-              </label>
-              <label>
-                Mot de passe
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-              </label>
-              <button type="submit" className="cta" disabled={loading}>
-                {loading ? 'Connexion...' : 'Se connecter'}
-              </button>
+            <div className="panel auth-panel">
+              <div className="web-segmented">
+                <button type="button" className={`segment ${authMode === 'connexion' ? 'active' : ''}`} onClick={() => { setAuthMode('connexion'); setNotice(null) }}>Connexion</button>
+                <button type="button" className={`segment ${authMode === 'activation' ? 'active' : ''}`} onClick={() => { setAuthMode('activation'); setNotice(null) }}>Activer mon compte</button>
+              </div>
+
+              {authMode === 'connexion' ? (
+                <form onSubmit={handleLogin} className="login-form">
+                  <label>
+                    Email
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </label>
+                  <label>
+                    Mot de passe
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                  </label>
+                  <button type="submit" className="cta" disabled={loading}>
+                    {loading ? 'Connexion...' : 'Se connecter'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={activateStudentAccount} className="login-form activation-form">
+                  <label>
+                    Rechercher votre nom ou prenom
+                    <div className="search-inline">
+                      <input value={activationQuery} onChange={e => setActivationQuery(e.target.value)} placeholder="Ex: Aminata" />
+                      <button type="button" className="ghost" onClick={searchInvitedStudents} disabled={loading}>Rechercher</button>
+                    </div>
+                  </label>
+                  {!!activationResults.length && (
+                    <div className="invite-results" role="listbox" aria-label="Etudiants invites">
+                      {activationResults.map(item => (
+                        <button key={item.id} type="button" className={selectedInvite?.id === item.id ? 'invite-option selected' : 'invite-option'} onClick={() => chooseInvite(item)}>
+                          <strong>{getFullName(item)}</strong>
+                          <span>{item.level?.name ?? 'ISE1'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {selectedInvite && (
+                    <>
+                      <div className="selected-invite"><span>Compte selectionne</span><strong>{getFullName(selectedInvite)}</strong></div>
+                      <label>Code d activation<input value={activationForm.activationCode} onChange={e => setActivationForm({ ...activationForm, activationCode: e.target.value.toUpperCase() })} minLength={12} maxLength={12} required /></label>
+                      <label>Email valide<input type="email" value={activationForm.email} onChange={e => setActivationForm({ ...activationForm, email: e.target.value })} required /></label>
+                      <div className="form-grid">
+                        <label>Telephone<input value={activationForm.phone} onChange={e => setActivationForm({ ...activationForm, phone: e.target.value })} minLength={6} maxLength={20} required /></label>
+                        <label>Numero Wave<input value={activationForm.wavePhone} onChange={e => setActivationForm({ ...activationForm, wavePhone: e.target.value })} minLength={6} maxLength={20} placeholder="Identique si vide" /></label>
+                      </div>
+                      <label>Nouveau mot de passe<input type="password" value={activationForm.password} onChange={e => setActivationForm({ ...activationForm, password: e.target.value })} minLength={6} required /></label>
+                      <button type="submit" className="cta" disabled={loading}>{loading ? 'Activation...' : 'Activer mon compte'}</button>
+                    </>
+                  )}
+                </form>
+              )}
               {notice && <p className={`notice ${notice.kind}`}>{notice.message}</p>}
               <div className="legal-links">
                 <a href="/privacy.html" target="_blank" rel="noreferrer">Confidentialite</a>
                 <a href="/terms.html" target="_blank" rel="noreferrer">Conditions</a>
               </div>
-            </form>
+            </div>
           </section>
         ) : !isAdmin ? (
           <>
