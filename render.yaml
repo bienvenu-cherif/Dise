@@ -45,7 +45,6 @@ services:
   - type: web
     name: cotadise-admin
     runtime: static
-    plan: free
     rootDir: cotadise-frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
