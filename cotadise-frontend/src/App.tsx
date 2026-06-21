@@ -1107,6 +1107,16 @@ function App() {
     })
   }
 
+  const enrollImportedIse1 = () => {
+    if (!selectedAcademicYearId) {
+      setNotice({ kind: 'error', message: 'Selectionnez l annee scolaire a appliquer aux nouveaux ISE1' })
+      return
+    }
+    runAction('Nouveaux ISE1 inscrits dans l annee scolaire', () =>
+      request(`/inscriptions-annuelles/annee/${selectedAcademicYearId}/inscrire-ise1`, token, { method: 'POST' }),
+    )
+  }
+
   const saveAnnualAmount = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!selectedAcademicYearId) {
@@ -1255,6 +1265,9 @@ function App() {
         setUserRoleFilter('etudiant')
         setUserStatusFilter('invite')
         setUserLevelFilter(levels.find(level => level.name.toUpperCase() === 'ISE1')?.id ?? '')
+        if (selectedAcademicYearId) {
+          await request(`/inscriptions-annuelles/annee/${selectedAcademicYearId}/inscrire-ise1`, token, { method: 'POST' })
+        }
       }
     })
   }
@@ -2263,7 +2276,10 @@ function App() {
                   </table>
                 </section>
 
-                <DataPanel title={`Exceptions et inscriptions ${selectedAcademicYear?.libelle ?? ''}`}>
+                <DataPanel
+                  title={`Exceptions et inscriptions ${selectedAcademicYear?.libelle ?? ''}`}
+                  action={<button type="button" className="cta compact" onClick={enrollImportedIse1}>Inscrire les nouveaux ISE1</button>}
+                >
                   <div className="panel-metrics">
                     <PanelMetric label="Inscriptions" value={annualInscriptionCounts.total} />
                     <PanelMetric label="Eligibles" value={annualInscriptionCounts.eligible} />

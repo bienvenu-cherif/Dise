@@ -53,6 +53,48 @@ export class InscriptionsAnnuellesService {
     });
   }
 
+  async inscrireNouveauxIse1(anneeAcademiqueId: string): Promise<{ createdCount: number; skippedCount: number }> {
+    const [anneeAcademique, level] = await Promise.all([
+      this.findAnnee(anneeAcademiqueId),
+      this.levelsRepository.findOne({ where: { name: 'ISE1' } }),
+    ]);
+    if (!level) {
+      throw new NotFoundException('Le niveau ISE1 est introuvable');
+    }
+
+    const users = await this.usersRepository.find({
+      where: {
+        role: 'etudiant',
+        entrySource: 'import_officiel',
+        level: { id: level.id },
+      },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const user of users) {
+      const existing = await this.inscriptionsRepository.findOne({
+        where: { user: { id: user.id }, anneeAcademique: { id: anneeAcademique.id } },
+      });
+      if (existing) {
+        skippedCount += 1;
+        continue;
+      }
+      await this.create({
+        userId: user.id,
+        anneeAcademiqueId: anneeAcademique.id,
+        levelId: level.id,
+        statutScolaire: 'actif',
+        eligibleCotisation: true,
+        commentaire: 'Nouvel ISE1 issu de l import officiel',
+      });
+      createdCount += 1;
+    }
+
+    return { createdCount, skippedCount };
+  }
+
   async findOne(id: string): Promise<InscriptionAnnuelle> {
     const inscription = await this.inscriptionsRepository.findOne({ where: { id } });
     if (!inscription) {
@@ -211,6 +253,9 @@ export class InscriptionsAnnuellesService {
       user.promotionSortante = undefined;
     }
     user.role = 'etudiant';
+    if (user.entrySource === 'import_officiel' && ['invite', 'profil_a_completer'].includes(user.accountStatus)) {
+      return;
+    }
     user.accountStatus = 'actif';
     user.isActive = true;
   }

@@ -28,6 +28,11 @@ export class InscriptionsAnnuellesController {
     return this.inscriptionsService.findByYear(anneeId);
   }
 
+  @Post('annee/:anneeId/inscrire-ise1')
+  inscrireNouveauxIse1(@Param('anneeId') anneeId: string) {
+    return this.inscriptionsService.inscrireNouveauxIse1(anneeId);
+  }
+
   @Get('passages/previsualiser/:anneeSourceId')
   previsualiserPassages(@Param('anneeSourceId') anneeSourceId: string) {
     return this.inscriptionsService.previsualiserPassages(anneeSourceId);
