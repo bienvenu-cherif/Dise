@@ -35,7 +35,7 @@ Les tests detailles sont decrits dans `docs/16-cahier-tests-manuels-mvp.md`.
 - Lancer un defi.
 - Accepter ou refuser un defi.
 - Voir la progression du defi.
-- Voir son classement et le podium.
+- Voir son rang personnel, la personne directement devant lui et la personne directement derriere lui.
 
 ## Parcours tresorier a valider
 
@@ -54,8 +54,7 @@ Les tests detailles sont decrits dans `docs/16-cahier-tests-manuels-mvp.md`.
 ## Points bloquants avant production officielle
 
 - Obtenir les vraies cles Wave marchand.
-- Remplacer les URLs de demonstration dans `eas.json`.
-- Mettre en ligne le backend en HTTPS.
+- Confirmer les URLs definitives dans `eas.json` si le domaine Render change.
 - Configurer SMTP reel et tester l'envoi email.
 - Tester le webhook Wave avec signature reelle.
 - Creer compte Apple Developer.

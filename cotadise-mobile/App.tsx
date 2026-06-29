@@ -1481,32 +1481,6 @@ function NotificationCard({ item, onPress }: { item: NotificationMessage; onPres
   );
 }
 
-function PodiumCard({ item, rank }: { item: StudentRanking['rankings'][number]; rank: number }) {
-  const progress = Math.round(item.progress ?? item.percentage ?? 0);
-  return (
-    <View style={[styles.podiumCard, rank === 1 && styles.podiumFirst]}>
-      <Text style={styles.podiumRank}>#{rank}</Text>
-      <Text style={styles.podiumName} numberOfLines={2}>{`${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || '-'}</Text>
-      <Text style={styles.podiumAmount}>{formatCurrency(item.paidAmount ?? 0)}</Text>
-      <Text style={styles.podiumProgress}>{progress}%</Text>
-    </View>
-  );
-}
-
-function RankRow({ item, rank, isMe }: { item: StudentRanking['rankings'][number]; rank: number; isMe?: boolean }) {
-  const progress = Math.round(item.progress ?? item.percentage ?? 0);
-  return (
-    <View style={[styles.rankItem, isMe && styles.rankItemMe]}>
-      <Text style={[styles.rankNumber, isMe && styles.rankNumberMe]}>#{rank}</Text>
-      <View style={styles.rankBody}>
-        <Text style={styles.listTitle}>{`${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || '-'}</Text>
-        <Text style={styles.listMeta}>{formatCurrency(item.paidAmount ?? 0)} verse</Text>
-      </View>
-      <Text style={styles.rankPercent}>{progress}%</Text>
-    </View>
-  );
-}
-
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.profileRow}>
@@ -2761,35 +2735,6 @@ const styles = StyleSheet.create({
   levelOptionTextActive: {
     color: '#ffffff',
   },
-  rankItem: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 10,
-    padding: 14,
-  },
-  rankItemMe: {
-    borderColor: '#22a6cf',
-    borderWidth: 2,
-  },
-  rankNumber: {
-    color: '#0f766e',
-    fontSize: 18,
-    fontWeight: '900',
-    width: 44,
-  },
-  rankNumberMe: {
-    color: '#1f1c5b',
-  },
-  rankBody: {
-    flex: 1,
-  },
-  rankPercent: {
-    color: '#0f172a',
-    fontWeight: '900',
-  },
   rankingHero: {
     backgroundColor: '#eff2c5',
     borderRadius: 20,
@@ -2818,44 +2763,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 23,
-  },
-  podiumRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-  },
-  podiumCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    flex: 1,
-    minHeight: 132,
-    padding: 12,
-  },
-  podiumFirst: {
-    backgroundColor: '#eff2c5',
-  },
-  podiumRank: {
-    color: '#1f1c5b',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  podiumName: {
-    color: '#0f172a',
-    fontSize: 13,
-    fontWeight: '900',
-    marginTop: 8,
-    minHeight: 36,
-  },
-  podiumAmount: {
-    color: '#154a8b',
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 6,
-  },
-  podiumProgress: {
-    color: '#0f766e',
-    fontWeight: '900',
-    marginTop: 4,
   },
   profileHero: {
     alignItems: 'center',

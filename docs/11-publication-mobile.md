@@ -67,13 +67,15 @@ npm run build:ios
 Les profils EAS utilisent `EXPO_PUBLIC_API_BASE`, `EXPO_PUBLIC_PRIVACY_URL` et
 `EXPO_PUBLIC_TERMS_URL`.
 
-Avant un build officiel, remplacer:
+Les profils `preview` et `production` pointent deja vers l'environnement Render
+de recette:
 
 ```txt
-https://api-cotadise.example.com/api
+https://cotadise-api.onrender.com/api
 ```
 
-par l'adresse reelle du backend de production.
+Si un domaine definitif est choisi plus tard, remplacer ces trois URLs dans
+`cotadise-mobile/eas.json`, puis relancer le controle de publication.
 
 Avant de construire une version destinee aux stores, executer depuis la racine :
 
@@ -104,7 +106,7 @@ Avant la publication officielle, preparer et rendre accessibles:
 
 ## Checklist avant store
 
-- Remplacer l'URL API de demonstration dans `cotadise-mobile/eas.json`.
+- Confirmer l'URL API, la confidentialite et les conditions dans `cotadise-mobile/eas.json`.
 - Ajouter l'icone de l'application.
 - Ajouter l'ecran de demarrage.
 - Verifier le nom public de l'application: CotaDISE.

@@ -19,7 +19,7 @@ Cette estimation suppose que les builds restent verts et que les tests manuels c
 - Confirmation serveur des paiements.
 - Alertes automatiques et manuelles.
 - Defis entre etudiants.
-- Classement et podium.
+- Rang personnel et position relative dans le niveau.
 - Alumni par promotion.
 - Dons alumni.
 - Configuration Wave marchand par annee.
@@ -41,8 +41,7 @@ Cette estimation suppose que les builds restent verts et que les tests manuels c
 - Brancher une vraie configuration SMTP.
 - Brancher les vraies cles Wave marchand ou sandbox officielle.
 - Tester le webhook Wave avec signature reelle.
-- Deployer le backend en HTTPS.
-- Remplacer les URLs de demonstration dans `cotadise-mobile/eas.json`.
+- Stabiliser le domaine definitif si Render n'est pas conserve.
 - Tester sur Android reel.
 - Tester sur iPhone reel via TestFlight.
 

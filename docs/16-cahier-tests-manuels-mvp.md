@@ -201,8 +201,10 @@ Etapes:
 Resultat attendu:
 
 - La position personnelle est visible.
-- Le podium top 3 est visible.
-- La ligne de l'etudiant connecte est mise en valeur.
+- Le rang de l'etudiant dans son niveau est visible.
+- La personne directement devant lui est affichee si elle existe.
+- La personne directement derriere lui est affichee si elle existe.
+- Aucun classement complet du niveau n'est expose cote etudiant.
 
 ### E08 - Defi
 

@@ -96,17 +96,16 @@ Elements:
 
 Objectif:
 
-- Afficher la position de l'etudiant.
+- Afficher la position personnelle de l'etudiant sans exposer toute la liste du niveau.
 
 Elements:
 
 - Rang personnel.
 - Carte de position personnelle.
-- Podium top 3.
-- Classement de la classe.
-- Mise en valeur de la ligne de l'etudiant connecte.
-- Progression des autres etudiants.
-- Badge des etudiants ayant termine.
+- Nombre total d'etudiants dans le niveau.
+- Nom et rang de la personne directement devant lui, si elle existe.
+- Nom et rang de la personne directement derriere lui, si elle existe.
+- Message clair si l'etudiant est premier ou dernier.
 
 ### Defis
 
@@ -176,7 +175,7 @@ Socle prevu:
 - progression et reste a payer;
 - paiement Wave;
 - historique des paiements;
-- classement du niveau;
+- rang personnel dans le niveau;
 - notifications et alertes;
 - defis de cotisation.
 

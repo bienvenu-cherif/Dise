@@ -18,7 +18,7 @@ Le compte Wave reel reste necessaire avant une production officielle, mais il ne
 - Alertes de paiement confirme.
 - Rappels automatiques.
 - Defis entre etudiants.
-- Classement et podium.
+- Rang personnel et position relative dans le niveau.
 - Passage annuel ISE1 vers ISE2, ISE2 vers ISE3, ISE3 vers alumni.
 - Dons alumni.
 - Messages manuels du tresorier.

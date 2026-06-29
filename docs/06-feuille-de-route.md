@@ -110,7 +110,7 @@ Taches:
 - Securiser les secrets.
 - Preparer les sauvegardes de base de donnees.
 - Configurer EAS Build pour generer les versions Android et iOS.
-- Remplacer l'URL API de demonstration par l'URL HTTPS de production.
+- Confirmer le domaine API definitif dans les profils EAS avant publication store.
 - Ajouter les icones, l'ecran de demarrage et les assets officiels de publication.
 - Preparer la publication Android: APK de test, AAB Play Store et fiche Google Play.
 - Preparer la publication iOS: compte Apple Developer, TestFlight, certificats et fiche App Store.

@@ -35,7 +35,7 @@ Cette commande execute :
 - Architecture Wave securisee, sans vraies cles marchand.
 - Rappels automatiques et messages manuels.
 - File email, statut SMTP, test SMTP et expedition manuelle.
-- Defis, classement, podium et notifications.
+- Defis, rang personnel et notifications.
 - Alumni, promotions et dons.
 - Passation du bureau avec revocation des anciens droits.
 - Audit, exports, health check PostgreSQL.
