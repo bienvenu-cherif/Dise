@@ -805,6 +805,14 @@ textarea {
   min-width: 0;
 }
 
+.panel-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .table-wrapper {
   border: 1px solid #e2e8f0;
   border-radius: 8px;

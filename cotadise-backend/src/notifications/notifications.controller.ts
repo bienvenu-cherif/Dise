@@ -45,4 +45,11 @@ export class NotificationsController {
   generateActiveYearContributionReminders() {
     return this.notificationsSchedulerService.runReminderCheck('api');
   }
+
+  @Post('reparer-confirmations-paiement')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'tresorier')
+  backfillPaymentConfirmations() {
+    return this.notificationsService.backfillPaymentConfirmations();
+  }
 }

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 import { AnneeAcademique } from '../annees-academiques/annee-academique.entity';
 import { Cotisation } from '../cotisations/cotisation.entity';
 import { EmailOutboxService } from '../email-outbox/email-outbox.service';
@@ -219,6 +219,50 @@ export class NotificationsService {
         origin: paiement.origin,
       },
     });
+  }
+
+  async backfillPaymentConfirmations() {
+    const paiements = await this.paiementsRepository.find({
+      where: { status: 'confirme' },
+      relations: {
+        user: true,
+        payer: true,
+        cotisation: {
+          anneeAcademique: true,
+        },
+      },
+      order: { paidAt: 'DESC' },
+    });
+    const created: Notification[] = [];
+    let skippedCount = 0;
+
+    for (const paiement of paiements) {
+      if (!paiement.user?.id) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const existingNotifications = await this.notificationsRepository.find({
+        where: {
+          recipient: { id: paiement.user.id },
+          type: In(['paiement_confirme', 'paiement_pour_toi']),
+        },
+      });
+      const alreadyNotified = existingNotifications.some(item => item.metadata?.paiementId === paiement.id);
+      if (alreadyNotified) {
+        skippedCount += 1;
+        continue;
+      }
+
+      created.push(await this.notifyPaymentConfirmed(paiement));
+    }
+
+    return {
+      scannedCount: paiements.length,
+      createdCount: created.length,
+      skippedCount,
+      notifications: created,
+    };
   }
 
   async notifyChallengeReceived(recipient: User, sender: User, metadata?: Record<string, unknown>): Promise<Notification> {

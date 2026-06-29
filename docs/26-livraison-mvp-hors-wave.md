@@ -31,6 +31,7 @@ Cette commande execute :
 - Montants par niveau et exceptions individuelles.
 - Generation et suivi des cotisations.
 - Paiements main a main et paiement pour camarade.
+- Reparation admin des notifications de paiement confirme si une recette a ete faite avant affichage cote etudiant.
 - Architecture Wave securisee, sans vraies cles marchand.
 - Rappels automatiques et messages manuels.
 - File email, statut SMTP, test SMTP et expedition manuelle.
@@ -65,3 +66,13 @@ Ces points ne sont pas des developpements manquants dans le depot :
 7. Lancer le smoke test contre l'API de test.
 8. Tester Android et iOS physiques.
 9. Ajouter Wave reel lorsque le compte marchand sera disponible.
+
+## Recette rapide apres import
+
+1. Importer les ISE1 officiels.
+2. Inscrire les nouveaux ISE1 dans l'annee active.
+3. Generer les cotisations annuelles.
+4. Activer au moins un compte etudiant avec son code prive.
+5. Saisir un paiement main a main.
+6. Ouvrir l'espace etudiant et verifier `Mes messages`.
+7. Si une confirmation manque pour un ancien paiement, utiliser `Paiements > Reparer confirmations`.

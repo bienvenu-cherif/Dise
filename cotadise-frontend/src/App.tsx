@@ -1660,6 +1660,12 @@ function App() {
     })
   }
 
+  const repairPaymentNotifications = () => {
+    runAction('Notifications de paiement verifiees', () =>
+      request('/notifications/reparer-confirmations-paiement', token, { method: 'POST' }),
+    )
+  }
+
   const testEmailConnection = () => {
     runAction('Connexion SMTP validee', async () => {
       const result = await request<{ success: boolean; skipped: boolean; reason?: string }>('/emails/tester-connexion', token, {
@@ -3083,7 +3089,15 @@ function App() {
                   <button type="submit" className="cta">Enregistrer</button>
                 </form>
 
-                  <DataPanel title="Paiements" action={<button type="button" className="ghost" onClick={() => handleDownload(paiementsExportPath, 'paiements.xlsx')}>Exporter</button>}>
+                  <DataPanel
+                    title="Paiements"
+                    action={(
+                      <div className="panel-actions">
+                        <button type="button" className="ghost compact" onClick={repairPaymentNotifications}>Reparer confirmations</button>
+                        <button type="button" className="ghost" onClick={() => handleDownload(paiementsExportPath, 'paiements.xlsx')}>Exporter</button>
+                      </div>
+                    )}
+                  >
                     <div className="panel-metrics">
                       <PanelMetric label="Confirmes" value={adminIndicators.confirmedPayments} />
                       <PanelMetric label="En attente" value={adminIndicators.pendingPayments} />
