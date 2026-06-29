@@ -62,6 +62,9 @@ type ActivationForm = {
 
 type PaymentBeneficiaryMode = 'moi' | 'camarade';
 
+const getRankingItemName = (item?: StudentRanking['rankings'][number] | null) =>
+  item ? `${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || 'un camarade' : '';
+
 export default function App() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -144,6 +147,16 @@ export default function App() {
     [openCotisations],
   );
   const unreadCount = notifications.filter((item) => !item.readAt).length;
+  const rankingContext = useMemo(() => {
+    const list = ranking?.rankings ?? [];
+    const currentIndex = user?.id ? list.findIndex((item) => item.userId === user.id) : -1;
+    return {
+      rank: ranking?.rank ?? (currentIndex >= 0 ? currentIndex + 1 : null),
+      total: ranking?.totalInLevel ?? list.length,
+      ahead: currentIndex > 0 ? list[currentIndex - 1] : null,
+      behind: currentIndex >= 0 && currentIndex < list.length - 1 ? list[currentIndex + 1] : null,
+    };
+  }, [ranking, user?.id]);
   const notificationCounts = useMemo(
     () => ({
       toutes: notifications.length,
@@ -1106,25 +1119,20 @@ export default function App() {
           <>
             <View style={styles.rankingHero}>
               <Text style={styles.heroLabel}>Ma position</Text>
-              <Text style={styles.rankingHeroRank}>{ranking?.rank ? `#${ranking.rank}` : '-'}</Text>
-              <Text style={styles.cotisationOverviewText}>{ranking?.totalInLevel ?? 0} etudiant(s) dans le niveau</Text>
+              <Text style={styles.rankingHeroRank}>{rankingContext.rank ? `#${rankingContext.rank}` : '-'}</Text>
+              <Text style={styles.cotisationOverviewText}>{rankingContext.total} etudiant(s) dans le niveau</Text>
             </View>
-            {!!ranking?.rankings.length && (
-              <>
-                <SectionTitle title="Podium" />
-                <View style={styles.podiumRow}>
-                  {ranking.rankings.slice(0, 3).map((item, index) => (
-                    <PodiumCard key={item.userId || index} item={item} rank={index + 1} />
-                  ))}
-                </View>
-                <SectionTitle title="Classement complet" />
-                {ranking.rankings.map((item, index) => (
-                  <RankRow key={item.userId || index} item={item} rank={index + 1} isMe={item.userId === user.id} />
-                ))}
-              </>
-            )}
-            {!ranking?.rankings.length && (
-              <EmptyState title="Classement indisponible" text="Le classement apparaitra lorsque les cotisations seront generees." />
+            {rankingContext.rank ? (
+              <View style={styles.rankingPositionCard}>
+                <Text style={styles.rankingPositionTitle}>Votre situation dans le niveau</Text>
+                <Text style={styles.rankingPositionText}>
+                  Vous occupez actuellement la place #{rankingContext.rank}
+                  {rankingContext.ahead ? ` derriere ${getRankingItemName(rankingContext.ahead)}` : ', personne n est devant vous'}
+                  {rankingContext.behind ? ` et devant ${getRankingItemName(rankingContext.behind)}` : ' et vous etes devant le reste du niveau'}.
+                </Text>
+              </View>
+            ) : (
+              <EmptyState title="Classement indisponible" text="Votre rang apparaitra lorsque les cotisations seront generees." />
             )}
           </>
         )}
@@ -2785,6 +2793,23 @@ const styles = StyleSheet.create({
     fontSize: 54,
     fontWeight: '900',
     marginTop: 4,
+  },
+  rankingPositionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    gap: 8,
+    padding: 16,
+  },
+  rankingPositionTitle: {
+    color: '#1f1c5b',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  rankingPositionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 23,
   },
   podiumRow: {
     flexDirection: 'row',

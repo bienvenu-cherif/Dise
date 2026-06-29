@@ -48,6 +48,11 @@
   max-width: 1280px;
 }
 
+.student-content {
+  gap: 14px;
+  max-width: 1120px;
+}
+
 .login-layout {
   align-items: center;
   display: grid;
@@ -142,7 +147,7 @@
 }
 
 .student-actions {
-  margin-bottom: 14px;
+  margin-bottom: 2px;
 }
 
 .web-segmented {
@@ -535,6 +540,59 @@ button {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.7fr);
+}
+
+.student-content .dashboard-grid,
+.student-content .two-column {
+  gap: 14px;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+}
+
+.student-content .panel {
+  padding: 20px;
+}
+
+.student-content .hero-panel {
+  padding: 22px;
+}
+
+.ranking-snapshot {
+  display: grid;
+  gap: 14px;
+}
+
+.ranking-snapshot > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+}
+
+.ranking-snapshot span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ranking-snapshot strong {
+  color: #1f1c5b;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.ranking-snapshot small {
+  color: #64748b;
+}
+
+.ranking-snapshot p {
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .indicator-grid {

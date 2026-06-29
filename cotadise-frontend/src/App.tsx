@@ -367,6 +367,11 @@ const getRankingLevelName = (level?: Ranking['level']) => {
   return typeof level === 'string' ? level : level.name
 }
 
+const getRankingName = (item?: Ranking | null) => {
+  if (!item) return ''
+  return `${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || 'un camarade'
+}
+
 const getStoredUser = () => {
   const stored = localStorage.getItem('cotadise_user')
   if (!stored) return null
@@ -823,6 +828,18 @@ function App() {
       .slice(0, 8),
     [rankings],
   )
+
+  const studentRankingContext = useMemo(() => {
+    const list = studentRanking?.rankings ?? rankings
+    const currentIndex = user?.id ? list.findIndex(item => item.userId === user.id) : -1
+    const rank = studentRanking?.rank ?? (currentIndex >= 0 ? currentIndex + 1 : null)
+    return {
+      rank,
+      total: studentRanking?.totalInLevel ?? list.length,
+      ahead: currentIndex > 0 ? list[currentIndex - 1] : null,
+      behind: currentIndex >= 0 && currentIndex < list.length - 1 ? list[currentIndex + 1] : null,
+    }
+  }, [rankings, studentRanking, user?.id])
 
   const studentStateMatches = useMemo(() => {
     const query = studentStateQuery.trim().toLowerCase()
@@ -1706,7 +1723,7 @@ function App() {
         )}
       </header>
 
-      <main className="content">
+      <main className={isConnected && !isAdmin ? 'content student-content' : 'content'}>
         {!isConnected ? (
           <section className="login-layout">
             <div className="login-copy">
@@ -1955,26 +1972,23 @@ function App() {
                 </table>
               </DataPanel>
 
-              <DataPanel title="Classement du niveau">
-                <table>
-                  <thead><tr><th>Rang</th><th>Etudiant</th><th>Verse</th><th>Progression</th></tr></thead>
-                  <tbody>
-                    {rankings.map((item, index) => {
-                      const percent = Math.round(item.progress ?? item.percentage ?? 0)
-                      return (
-                        <tr key={item.userId ?? index}>
-                          <td>#{index + 1}</td>
-                          <td>{`${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || '-'}</td>
-                          <td>{formatCurrency(item.paidAmount ?? 0)}</td>
-                          <td>
-                            <div className="table-progress"><span style={{ width: `${Math.min(100, percent)}%` }} /></div>
-                            {percent}%
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+              <DataPanel title="Ma position dans le niveau">
+                <div className="ranking-snapshot">
+                  <div>
+                    <span>Rang actuel</span>
+                    <strong>{studentRankingContext.rank ? `#${studentRankingContext.rank}` : '-'}</strong>
+                    <small>{studentRankingContext.total} etudiant(s) dans votre niveau</small>
+                  </div>
+                  {studentRankingContext.rank ? (
+                    <p>
+                      Dans votre niveau, vous occupez actuellement la place #{studentRankingContext.rank}
+                      {studentRankingContext.ahead ? ` derriere ${getRankingName(studentRankingContext.ahead)}` : ', personne n est devant vous'}
+                      {studentRankingContext.behind ? ` et devant ${getRankingName(studentRankingContext.behind)}` : ' et vous etes devant le reste du niveau'}.
+                    </p>
+                  ) : (
+                    <p>Votre rang apparaitra des que les cotisations du niveau seront generees.</p>
+                  )}
+                </div>
               </DataPanel>
             </section>
 
