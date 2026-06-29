@@ -154,7 +154,9 @@ export default function App() {
       rank: ranking?.rank ?? (currentIndex >= 0 ? currentIndex + 1 : null),
       total: ranking?.totalInLevel ?? list.length,
       ahead: currentIndex > 0 ? list[currentIndex - 1] : null,
+      aheadRank: currentIndex > 0 ? currentIndex : null,
       behind: currentIndex >= 0 && currentIndex < list.length - 1 ? list[currentIndex + 1] : null,
+      behindRank: currentIndex >= 0 && currentIndex < list.length - 1 ? currentIndex + 2 : null,
     };
   }, [ranking, user?.id]);
   const notificationCounts = useMemo(
@@ -1126,9 +1128,13 @@ export default function App() {
               <View style={styles.rankingPositionCard}>
                 <Text style={styles.rankingPositionTitle}>Votre situation dans le niveau</Text>
                 <Text style={styles.rankingPositionText}>
-                  Vous occupez actuellement la place #{rankingContext.rank}
-                  {rankingContext.ahead ? ` derriere ${getRankingItemName(rankingContext.ahead)}` : ', personne n est devant vous'}
-                  {rankingContext.behind ? ` et devant ${getRankingItemName(rankingContext.behind)}` : ' et vous etes devant le reste du niveau'}.
+                  Vous etes actuellement #{rankingContext.rank} sur {rankingContext.total}.{' '}
+                  {rankingContext.ahead
+                    ? `Devant vous : ${getRankingItemName(rankingContext.ahead)} (#${rankingContext.aheadRank}).`
+                    : 'Personne n est devant vous.'}{' '}
+                  {rankingContext.behind
+                    ? `Derriere vous : ${getRankingItemName(rankingContext.behind)} (#${rankingContext.behindRank}).`
+                    : 'Personne n est derriere vous.'}
                 </Text>
               </View>
             ) : (

@@ -837,7 +837,9 @@ function App() {
       rank,
       total: studentRanking?.totalInLevel ?? list.length,
       ahead: currentIndex > 0 ? list[currentIndex - 1] : null,
+      aheadRank: currentIndex > 0 ? currentIndex : null,
       behind: currentIndex >= 0 && currentIndex < list.length - 1 ? list[currentIndex + 1] : null,
+      behindRank: currentIndex >= 0 && currentIndex < list.length - 1 ? currentIndex + 2 : null,
     }
   }, [rankings, studentRanking, user?.id])
 
@@ -1981,9 +1983,15 @@ function App() {
                   </div>
                   {studentRankingContext.rank ? (
                     <p>
-                      Dans votre niveau, vous occupez actuellement la place #{studentRankingContext.rank}
-                      {studentRankingContext.ahead ? ` derriere ${getRankingName(studentRankingContext.ahead)}` : ', personne n est devant vous'}
-                      {studentRankingContext.behind ? ` et devant ${getRankingName(studentRankingContext.behind)}` : ' et vous etes devant le reste du niveau'}.
+                      Vous etes actuellement #{studentRankingContext.rank} sur {studentRankingContext.total}.
+                      {' '}
+                      {studentRankingContext.ahead
+                        ? `Devant vous : ${getRankingName(studentRankingContext.ahead)} (#${studentRankingContext.aheadRank}).`
+                        : 'Personne n est devant vous.'}
+                      {' '}
+                      {studentRankingContext.behind
+                        ? `Derriere vous : ${getRankingName(studentRankingContext.behind)} (#${studentRankingContext.behindRank}).`
+                        : 'Personne n est derriere vous.'}
                     </p>
                   ) : (
                     <p>Votre rang apparaitra des que les cotisations du niveau seront generees.</p>
