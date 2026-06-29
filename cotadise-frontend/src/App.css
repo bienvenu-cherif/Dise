@@ -49,8 +49,8 @@
 }
 
 .student-content {
-  gap: 14px;
-  max-width: 1120px;
+  gap: 12px;
+  max-width: 980px;
 }
 
 .login-layout {
@@ -544,16 +544,26 @@ button {
 
 .student-content .dashboard-grid,
 .student-content .two-column {
-  gap: 14px;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+  gap: 12px;
+  grid-template-columns: 1fr;
 }
 
 .student-content .panel {
-  padding: 20px;
+  padding: 18px;
 }
 
 .student-content .hero-panel {
-  padding: 22px;
+  padding: 20px;
+}
+
+.student-content .summary-strip {
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.student-content .quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .ranking-snapshot {
@@ -1105,14 +1115,85 @@ td small {
   .summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .student-content,
+  .student-content .dashboard-grid,
+  .student-content .two-column,
+  .student-content .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .student-content .hero-panel {
+    gap: 12px;
+  }
 }
 
 @media (max-width: 560px) {
+  .app-shell {
+    padding: 8px;
+  }
+
+  .topbar {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .brand {
+    font-size: 1.45rem;
+  }
+
+  .hero-panel h1 {
+    font-size: 1.65rem;
+    line-height: 1.08;
+    margin: 10px 0;
+  }
+
+  .hero-actions,
+  .student-actions,
+  .student-content .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions .ghost,
+  .student-actions .ghost,
+  .student-content .cta {
+    width: 100%;
+  }
+
+  .student-content {
+    gap: 10px;
+    width: 100%;
+  }
+
+  .student-content .panel,
+  .student-content .hero-panel,
+  .summary-strip article {
+    padding: 14px;
+  }
+
   .summary-strip,
   .campaign-ribbon,
   .form-grid,
   .user-filters {
     grid-template-columns: 1fr;
+  }
+
+  .summary-strip strong {
+    font-size: 1.18rem;
+  }
+
+  .section-header {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .table-wrapper {
+    max-width: calc(100vw - 44px);
+  }
+
+  table {
+    min-width: 560px;
   }
 
   .user-chip {

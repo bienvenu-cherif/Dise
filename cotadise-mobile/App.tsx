@@ -1833,14 +1833,13 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   authInfoGrid: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     marginBottom: 14,
   },
   authInfoCard: {
     backgroundColor: '#eff2c5',
     borderRadius: 16,
-    flex: 1,
     minHeight: 104,
     padding: 13,
   },
@@ -1884,8 +1883,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   rowInput: {
-    flex: 1,
     marginBottom: 0,
+    width: '100%',
   },
   primaryButton: {
     alignItems: 'center',
@@ -1907,6 +1906,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 44,
     paddingHorizontal: 14,
+    width: '100%',
   },
   smallButtonText: {
     color: '#ffffff',
@@ -2030,7 +2030,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   header: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
@@ -2075,14 +2075,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 9,
+    flexShrink: 0,
   },
   logoutText: {
     color: '#cbd5e1',
     fontWeight: '800',
   },
   content: {
-    padding: 16,
-    paddingBottom: 100,
+    padding: 12,
+    paddingBottom: 128,
   },
   heroCard: {
     backgroundColor: '#eff2c5',
@@ -2109,7 +2110,7 @@ const styles = StyleSheet.create({
   },
   heroTop: {
     alignItems: 'flex-start',
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -2160,10 +2161,13 @@ const styles = StyleSheet.create({
   },
   statRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   stat: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '31%',
+    minWidth: 92,
   },
   statLabel: {
     color: '#64748b',
@@ -2203,8 +2207,7 @@ const styles = StyleSheet.create({
   insightCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    flexBasis: '48%',
-    flexGrow: 1,
+    flexBasis: '100%',
     minHeight: 92,
     padding: 12,
   },
@@ -2272,8 +2275,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   nextActionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
     gap: 9,
     marginTop: 13,
   },
@@ -2314,8 +2316,7 @@ const styles = StyleSheet.create({
     borderColor: '#dbe4ee',
     borderRadius: 16,
     borderWidth: 1,
-    flexBasis: '48%',
-    flexGrow: 1,
+    flexBasis: '100%',
     minHeight: 112,
     padding: 14,
   },
@@ -2332,7 +2333,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderRow: {
     alignItems: 'flex-start',
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -2404,8 +2405,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   selectedBeneficiary: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: 'stretch',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     gap: 10,
   },
@@ -2687,12 +2688,12 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
   },
   rowBetween: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     gap: 10,
   },
@@ -2737,6 +2738,7 @@ const styles = StyleSheet.create({
     borderColor: '#cbd5e1',
     borderRadius: 12,
     borderWidth: 1,
+    flexGrow: 1,
     minHeight: 42,
     minWidth: 74,
     justifyContent: 'center',
