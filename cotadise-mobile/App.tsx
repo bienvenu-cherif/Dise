@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -47,6 +47,8 @@ const DEFAULT_LEVEL_FILTERS: Level[] = [
   { id: 'ISE2', name: 'ISE2' },
   { id: 'ISE3', name: 'ISE3' },
 ];
+const TOP_SAFE_SPACE = Platform.OS === 'android' ? Math.max(Constants.statusBarHeight ?? 0, 24) : 0;
+const BOTTOM_SAFE_SPACE = Platform.OS === 'android' ? 28 : 22;
 
 type Tab = 'accueil' | 'cotisations' | 'classement' | 'messages' | 'defis' | 'profil';
 type NotificationFilter = 'toutes' | 'non_lues' | 'paiements' | 'defis' | 'tresorier';
@@ -64,6 +66,21 @@ type PaymentBeneficiaryMode = 'moi' | 'camarade';
 
 const getRankingItemName = (item?: StudentRanking['rankings'][number] | null) =>
   item ? `${item.firstName ?? ''} ${item.lastName ?? ''}`.trim() || 'un camarade' : '';
+
+function OrdinalRank({ rank, total, color = '#1f1c5b' }: { rank: number | null; total: number; color?: string }) {
+  if (!rank) {
+    return <Text style={[styles.ordinalRankMain, { color }]}>-</Text>;
+  }
+
+  const suffix = rank === 1 ? 'er' : 'e';
+  return (
+    <Text style={[styles.ordinalRankMain, { color }]}>
+      {rank}
+      <Text style={styles.ordinalRankSuffix}>{suffix}</Text>
+      <Text style={styles.ordinalRankTotal}>/{total}</Text>
+    </Text>
+  );
+}
 
 export default function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -111,6 +128,7 @@ export default function App() {
   const [activationQuery, setActivationQuery] = useState('');
   const [invites, setInvites] = useState<InvitedStudent[]>([]);
   const [selectedInvite, setSelectedInvite] = useState<InvitedStudent | null>(null);
+  const contentScrollRef = useRef<ScrollView | null>(null);
   const [activationForm, setActivationForm] = useState<ActivationForm>({
     activationCode: '',
     email: '',
@@ -147,6 +165,14 @@ export default function App() {
     [openCotisations],
   );
   const unreadCount = notifications.filter((item) => !item.readAt).length;
+  const latestUnreadNotification = useMemo(
+    () =>
+      notifications
+        .filter((item) => !item.readAt)
+        .slice()
+        .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())[0],
+    [notifications],
+  );
   const rankingContext = useMemo(() => {
     const list = ranking?.rankings ?? [];
     const currentIndex = user?.id ? list.findIndex((item) => item.userId === user.id) : -1;
@@ -178,7 +204,6 @@ export default function App() {
       }),
     [notificationFilter, notifications],
   );
-  const openDefisCount = defis.filter((item) => item.status === 'en_attente').length;
   const challengeCounts = useMemo(
     () => ({
       tous: defis.length,
@@ -189,6 +214,7 @@ export default function App() {
     }),
     [defis, user?.id],
   );
+  const activeChallengeCount = challengeCounts.actifs;
   const filteredDefis = useMemo(
     () =>
       defis.filter((item) => {
@@ -220,13 +246,6 @@ export default function App() {
     : nextCotisation
       ? `${nextCotisation.title} - reste ${formatCurrency(nextCotisationRemaining)} avant le ${formatDateTime(nextCotisation.dueDate).split(' ')[0]}`
       : 'Aucune cotisation ouverte pour le moment.';
-  const lastPayment = useMemo(
-    () =>
-      paiements
-        .slice()
-        .sort((a, b) => new Date(b.paidAt ?? 0).getTime() - new Date(a.paidAt ?? 0).getTime())[0],
-    [paiements],
-  );
   const recentPaiements = useMemo(
     () =>
       paiements
@@ -249,6 +268,18 @@ export default function App() {
       loadData(token).catch((error) => setNotice(error.message));
     }
   }, [token]);
+
+  useEffect(() => {
+    if (tab !== 'messages' || !token) return;
+    const unread = notifications.filter((item) => !item.readAt);
+    if (!unread.length) return;
+
+    const readAt = new Date().toISOString();
+    setNotifications((items) => items.map((item) => (!item.readAt ? { ...item, readAt } : item)));
+    Promise.all(unread.map((item) => request(`/notifications/${item.id}/lire`, token, { method: 'PATCH' }))).catch(() => {
+      loadData(token).catch(() => undefined);
+    });
+  }, [notifications, tab, token]);
 
   const restoreSession = async () => {
     const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
@@ -807,12 +838,20 @@ export default function App() {
             <Text style={styles.headerMeta}>{summary?.level?.name || user.level?.name || 'Niveau non renseigne'}</Text>
           </View>
         </View>
-        <Pressable style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutText}>Sortir</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {tab !== 'accueil' && (
+            <Pressable style={styles.backButton} onPress={() => setTab('accueil')}>
+              <Text style={styles.backButtonText}>Retour</Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.logoutButton} onPress={logout}>
+            <Text style={styles.logoutText}>Quitter</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
+        ref={contentScrollRef}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData()} />}
       >
@@ -820,14 +859,22 @@ export default function App() {
           <>
             <View style={styles.heroCard}>
               <View style={styles.heroTop}>
-                <View>
-                  <Text style={styles.heroLabel}>Progression annuelle</Text>
-                  <Text style={styles.heroPercent}>{summary?.progress ?? 0}%</Text>
+                <View style={styles.heroProgressLine}>
+                  <View style={styles.heroProgressText}>
+                    <Text style={styles.heroLabel}>Progression annuelle</Text>
+                    <Text style={styles.heroPercent}>{summary?.progress ?? 0}%</Text>
+                  </View>
+                  <Pressable style={styles.rankPill} onPress={() => setTab('classement')}>
+                    <Text style={styles.rankPillLabel}>Rang</Text>
+                    <OrdinalRank rank={rankingContext.rank} total={rankingContext.total} />
+                  </Pressable>
                 </View>
-                <View style={[styles.statusPill, hasCompletedCotisation && styles.statusPillDone]}>
-                  <Text style={[styles.statusPillText, hasCompletedCotisation && styles.statusPillTextDone]}>
-                    {hasCompletedCotisation ? 'Terminee' : 'En cours'}
-                  </Text>
+                <View style={styles.heroPills}>
+                  <View style={[styles.statusPill, hasCompletedCotisation && styles.statusPillDone]}>
+                    <Text style={[styles.statusPillText, hasCompletedCotisation && styles.statusPillTextDone]}>
+                      {hasCompletedCotisation ? 'Terminee' : 'En cours'}
+                    </Text>
+                  </View>
                 </View>
               </View>
               <View style={styles.progressTrack}>
@@ -849,6 +896,21 @@ export default function App() {
               </View>
             )}
 
+            {!!latestUnreadNotification && (
+              <Pressable style={styles.homeNoticeCard} onPress={() => setTab('messages')}>
+                <Text style={styles.homeNoticeLabel}>Nouvelle alerte</Text>
+                <Text style={styles.homeNoticeTitle}>{latestUnreadNotification.title}</Text>
+                <Text style={styles.homeNoticeText} numberOfLines={2}>{latestUnreadNotification.message}</Text>
+              </Pressable>
+            )}
+
+            {activeChallengeCount > 0 && (
+              <Pressable style={styles.homeChallengeCard} onPress={() => setTab('defis')}>
+                <Text style={styles.homeNoticeLabel}>Defi en cours</Text>
+                <Text style={styles.homeNoticeTitle}>{activeChallengeCount} defi(s) a suivre</Text>
+              </Pressable>
+            )}
+
             <View style={styles.nextActionCard}>
               <View style={styles.nextActionHeader}>
                 <View style={styles.nextActionIcon}>
@@ -867,6 +929,8 @@ export default function App() {
                     onPress={() => {
                       switchBeneficiaryMode('moi');
                       setSelectedCotisationId(nextCotisation.id);
+                      setPaymentAmount(String(nextCotisationRemaining));
+                      setTimeout(() => contentScrollRef.current?.scrollToEnd({ animated: true }), 80);
                     }}
                   >
                     <Text style={styles.nextActionButtonPrimaryText}>Payer maintenant</Text>
@@ -875,45 +939,10 @@ export default function App() {
                 <Pressable style={styles.nextActionButton} onPress={() => setTab(hasCompletedCotisation ? 'defis' : 'messages')}>
                   <Text style={styles.nextActionButtonText}>{hasCompletedCotisation ? 'Voir defis' : 'Voir alertes'}</Text>
                 </Pressable>
+                <Pressable style={styles.nextActionButton} onPress={() => setTab('defis')}>
+                  <Text style={styles.nextActionButtonText}>Lancer un defi</Text>
+                </Pressable>
               </View>
-            </View>
-
-            <View style={styles.insightGrid}>
-              <Insight label="Rang" value={ranking?.rank ? `#${ranking.rank}` : '-'} detail={`${ranking?.totalInLevel ?? 0} dans le niveau`} />
-              <Insight label="Alertes" value={`${unreadCount}`} detail={unreadCount ? 'non lue(s)' : 'a jour'} />
-              <Insight label="Defis" value={`${openDefisCount}`} detail={openDefisCount ? 'en attente' : 'calme'} />
-              <Insight label="Dernier" value={lastPayment ? formatCurrency(lastPayment.amount) : '-'} detail={lastPayment?.paidAt ? formatDateTime(lastPayment.paidAt).split(' ')[0] : 'paiement'} />
-            </View>
-
-            <View style={styles.actionGrid}>
-              <Pressable
-                style={styles.actionCard}
-                onPress={() => {
-                  switchBeneficiaryMode('moi');
-                  setTab('accueil');
-                }}
-              >
-                <Text style={styles.actionTitle}>Cotiser pour moi</Text>
-                <Text style={styles.actionText}>Payer ma cotisation avec mon numero Wave.</Text>
-              </Pressable>
-              <Pressable
-                style={styles.actionCard}
-                onPress={() => {
-                  switchBeneficiaryMode('camarade');
-                  setTab('accueil');
-                }}
-              >
-                <Text style={styles.actionTitle}>Payer pour un camarade</Text>
-                <Text style={styles.actionText}>Rechercher un etudiant et alimenter sa cotisation.</Text>
-              </Pressable>
-              <Pressable style={styles.actionCard} onPress={() => setTab('defis')}>
-                <Text style={styles.actionTitle}>Lancer un defi</Text>
-                <Text style={styles.actionText}>Defier un camarade sur la progression de cotisation.</Text>
-              </Pressable>
-              <Pressable style={styles.actionCard} onPress={() => setTab('messages')}>
-                <Text style={styles.actionTitle}>Voir mes alertes</Text>
-                <Text style={styles.actionText}>Messages du tresorier, paiements et defis.</Text>
-              </Pressable>
             </View>
 
             <View style={styles.card}>
@@ -1434,6 +1463,16 @@ export default function App() {
         ].map(([key, label]) => (
           <Pressable key={key} style={[styles.navItem, tab === key && styles.navItemActive]} onPress={() => setTab(key as Tab)}>
             <Text style={[styles.navText, tab === key && styles.navTextActive]}>{label}</Text>
+            {key === 'messages' && unreadCount > 0 && (
+              <View style={styles.navBadge}>
+                <Text style={styles.navBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+            {key === 'defis' && activeChallengeCount > 0 && (
+              <View style={styles.navBadge}>
+                <Text style={styles.navBadgeText}>{activeChallengeCount > 9 ? '9+' : activeChallengeCount}</Text>
+              </View>
+            )}
           </Pressable>
         ))}
       </View>
@@ -1446,16 +1485,6 @@ function Stat({ label, value }: { label: string; value: string }) {
     <View style={styles.stat}>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue}>{value}</Text>
-    </View>
-  );
-}
-
-function Insight({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <View style={styles.insightCard}>
-      <Text style={styles.insightLabel}>{label}</Text>
-      <Text style={styles.insightValue}>{value}</Text>
-      <Text style={styles.insightDetail}>{detail}</Text>
     </View>
   );
 }
@@ -2014,8 +2043,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 14,
+    paddingTop: TOP_SAFE_SPACE + 12,
+    paddingBottom: 12,
   },
   headerIdentity: {
     alignItems: 'center',
@@ -2049,8 +2078,26 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginTop: 2,
   },
+  headerActions: {
+    alignItems: 'stretch',
+    flexShrink: 0,
+    gap: 8,
+  },
+  backButton: {
+    alignItems: 'center',
+    backgroundColor: '#eff2c5',
+    borderRadius: 12,
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  backButtonText: {
+    color: '#1f1c5b',
+    fontWeight: '900',
+  },
   logoutButton: {
-    borderColor: '#334155',
+    backgroundColor: '#fee2e2',
+    borderColor: '#fecaca',
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
@@ -2058,12 +2105,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   logoutText: {
-    color: '#cbd5e1',
-    fontWeight: '800',
+    color: '#991b1b',
+    fontWeight: '900',
   },
   content: {
     padding: 12,
-    paddingBottom: 128,
+    paddingBottom: 140 + BOTTOM_SAFE_SPACE,
   },
   heroCard: {
     backgroundColor: '#eff2c5',
@@ -2094,6 +2141,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  heroProgressLine: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  heroProgressText: {
+    flex: 1,
+  },
+  heroPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   heroLabel: {
     color: '#154a8b',
     fontWeight: '800',
@@ -2120,6 +2182,37 @@ const styles = StyleSheet.create({
   },
   statusPillTextDone: {
     color: '#166534',
+  },
+  rankPill: {
+    backgroundColor: '#ffffff',
+    borderColor: '#dbe4ee',
+    borderRadius: 14,
+    borderWidth: 1,
+    minHeight: 58,
+    minWidth: 104,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  rankPillLabel: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  ordinalRankMain: {
+    color: '#1f1c5b',
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  ordinalRankSuffix: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  ordinalRankTotal: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '900',
   },
   progressTrack: {
     backgroundColor: '#e2e8f0',
@@ -2178,34 +2271,42 @@ const styles = StyleSheet.create({
     color: '#166534',
     lineHeight: 20,
   },
-  insightGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 14,
-  },
-  insightCard: {
-    backgroundColor: '#ffffff',
+  homeNoticeCard: {
+    backgroundColor: '#ecfeff',
+    borderColor: '#bae6fd',
+    borderLeftColor: '#22a6cf',
+    borderLeftWidth: 5,
     borderRadius: 16,
-    flexBasis: '100%',
-    minHeight: 92,
-    padding: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 14,
   },
-  insightLabel: {
-    color: '#64748b',
-    fontSize: 12,
+  homeChallengeCard: {
+    backgroundColor: '#f5f3ff',
+    borderColor: '#ddd6fe',
+    borderLeftColor: '#7c3aed',
+    borderLeftWidth: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 14,
+  },
+  homeNoticeLabel: {
+    color: '#0f766e',
+    fontSize: 11,
     fontWeight: '900',
+    textTransform: 'uppercase',
   },
-  insightValue: {
+  homeNoticeTitle: {
     color: '#1f1c5b',
-    fontSize: 24,
+    fontSize: 15,
     fontWeight: '900',
-    marginTop: 6,
+    marginTop: 4,
   },
-  insightDetail: {
-    color: '#64748b',
-    fontSize: 12,
-    marginTop: 2,
+  homeNoticeText: {
+    color: '#475569',
+    lineHeight: 19,
+    marginTop: 4,
   },
   nextActionCard: {
     backgroundColor: '#ffffff',
@@ -2827,12 +2928,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopColor: '#e2e8f0',
     borderTopWidth: 1,
-    bottom: 0,
+    bottom: Platform.OS === 'android' ? 10 : 0,
     flexDirection: 'row',
     left: 0,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 10,
+    paddingBottom: BOTTOM_SAFE_SPACE,
     paddingHorizontal: 8,
-    paddingTop: 8,
+    paddingTop: 10,
     position: 'absolute',
     right: 0,
   },
@@ -2841,6 +2942,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flex: 1,
     paddingVertical: 9,
+    position: 'relative',
   },
   navItemActive: {
     backgroundColor: '#ccfbf1',
@@ -2852,5 +2954,22 @@ const styles = StyleSheet.create({
   },
   navTextActive: {
     color: '#0f766e',
+  },
+  navBadge: {
+    alignItems: 'center',
+    backgroundColor: '#ef4444',
+    borderRadius: 999,
+    minHeight: 18,
+    minWidth: 18,
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    position: 'absolute',
+    right: 4,
+    top: 2,
+  },
+  navBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '900',
   },
 });
