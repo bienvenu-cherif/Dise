@@ -14,6 +14,12 @@ Avec le backend deja demarre :
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-mvp.ps1 -WithSmokeTest
 ```
 
+Pour verifier la recette publique Render sans compte Wave :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-public-recette.ps1
+```
+
 Cette commande execute :
 
 - tests Jest backend;
@@ -41,6 +47,7 @@ Cette commande execute :
 - Audit, exports, health check PostgreSQL.
 - Sauvegarde et restauration PostgreSQL.
 - Builds Android/iOS prepares avec Expo EAS.
+- Recette publique Render automatisee: API, admin, pages legales et URLs Expo/EAS.
 
 ## Dependances externes encore necessaires
 
@@ -76,3 +83,15 @@ Ces points ne sont pas des developpements manquants dans le depot :
 5. Saisir un paiement main a main.
 6. Ouvrir l'espace etudiant et verifier `Mes messages`.
 7. Si une confirmation manque pour un ancien paiement, utiliser `Paiements > Reparer confirmations`.
+
+## Recette publique Render
+
+La commande `check-public-recette.ps1` controle que :
+
+- l'API publique repond sur `/api/health`;
+- le frontend tresorier est accessible;
+- les pages `privacy.html` et `terms.html` sont publiees;
+- les profils Expo `preview` et `production` pointent vers les memes URLs publiques.
+
+Elle peut etre lancee sans identifiants administrateur. Elle sert de controle rapide
+avant une session de test sur telephone ou une construction EAS.
