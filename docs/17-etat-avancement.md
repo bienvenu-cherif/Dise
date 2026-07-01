@@ -2,7 +2,7 @@
 
 ## Estimation actuelle
 
-Avancement MVP hors integration Wave reelle estime: 95%.
+Avancement MVP hors integration Wave reelle estime: 97%.
 
 Cette estimation suppose que les builds restent verts et que les tests manuels critiques du cahier MVP passent sur un environnement local ou de test.
 
@@ -34,6 +34,9 @@ Cette estimation suppose que les builds restent verts et que les tests manuels c
 - Health check PostgreSQL, sauvegarde et restauration.
 - Controle SMTP et file email depuis l'administration.
 - Activation ISE1 protegee par code individuel.
+- Recette publique Render automatisee.
+- Surveillance publique GitHub Actions de l'API, de l'admin et des pages legales.
+- Checklist finale hors Wave pour les tests tresorier et etudiant.
 
 ## Reste avant pilote reel
 
@@ -48,14 +51,14 @@ Cette estimation suppose que les builds restent verts et que les tests manuels c
 ## Reste avant production officielle
 
 - Elargir progressivement la couverture automatisee au-dela des regles sensibles deja testees.
-- Politique de confidentialite publiee en ligne.
 - Comptes Apple Developer et Google Play Console.
 - Captures store et fiches de publication.
-- Automatiser la sauvegarde quotidienne sur l'hebergeur choisi.
-- Brancher `/api/health` a un service de monitoring externe.
+- Automatiser la sauvegarde quotidienne chez l'hebergeur choisi.
+- Remplacer ou completer la surveillance GitHub par un monitoring externe avec alertes email/SMS.
 
 ## Note demo sans Wave reel
 
 L'absence de compte Wave marchand ne bloque pas la poursuite du developpement ni une demonstration MVP.
 
-Voir `docs/18-demo-sans-wave-reel.md` pour le parcours conseille.
+Voir `docs/18-demo-sans-wave-reel.md` pour le parcours conseille et
+`docs/30-recette-finale-hors-wave.md` pour la checklist de validation finale.

@@ -1,0 +1,17 @@
+name: Surveillance publique CotaDISE
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  recette-publique:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+      - name: Verifier API, admin et pages legales
+        shell: pwsh
+        run: ./scripts/check-public-recette.ps1

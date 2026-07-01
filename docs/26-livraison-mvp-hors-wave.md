@@ -48,6 +48,8 @@ Cette commande execute :
 - Sauvegarde et restauration PostgreSQL.
 - Builds Android/iOS prepares avec Expo EAS.
 - Recette publique Render automatisee: API, admin, pages legales et URLs Expo/EAS.
+- Surveillance publique GitHub Actions toutes les 30 minutes.
+- Checklist finale de recette hors Wave.
 
 ## Dependances externes encore necessaires
 
@@ -95,3 +97,13 @@ La commande `check-public-recette.ps1` controle que :
 
 Elle peut etre lancee sans identifiants administrateur. Elle sert de controle rapide
 avant une session de test sur telephone ou une construction EAS.
+
+La meme verification est aussi executee par GitHub Actions via le workflow
+`Surveillance publique CotaDISE`. Le workflow peut etre lance manuellement et tourne
+toutes les 30 minutes tant que le depot GitHub reste actif.
+
+## Checklist finale
+
+La recette fonctionnelle complete est decrite dans `docs/30-recette-finale-hors-wave.md`.
+Elle couvre le parcours tresorier, le parcours etudiant, les points acceptes sans Wave
+et les criteres de sortie avant pilote.
