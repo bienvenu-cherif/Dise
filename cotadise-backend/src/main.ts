@@ -9,8 +9,17 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const localTestOrigins = [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/];
   app.enableCors({
-    origin: configuredOrigins.length ? configuredOrigins : true,
+    origin: configuredOrigins.length
+      ? (origin, callback) => {
+          if (!origin || configuredOrigins.includes(origin) || localTestOrigins.some((pattern) => pattern.test(origin))) {
+            callback(null, true);
+            return;
+          }
+          callback(new Error(`Origine CORS non autorisee: ${origin}`));
+        }
+      : true,
     credentials: false,
   });
   app.useGlobalPipes(new ValidationPipe({

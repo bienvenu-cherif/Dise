@@ -12,6 +12,7 @@ les paiements main a main et verifier tout le parcours etudiant.
 - L'admin repond sur `https://cotadise-admin.onrender.com`.
 - Les pages legales repondent sur `/privacy.html` et `/terms.html`.
 - Le mobile pointe vers `https://cotadise-api.onrender.com/api`.
+- Le test ordinateur via Expo Web utilise `http://localhost:8081`, autorise par CORS pour la recette locale.
 - Le compte tresorier de recette est disponible.
 - Un fichier d'import ISE1 contient uniquement `nom` et `prenom`.
 
