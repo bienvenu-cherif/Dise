@@ -235,6 +235,14 @@
   gap: 8px;
 }
 
+.inline-form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  margin: 14px 0;
+}
+
 .compact {
   min-height: 34px;
   padding: 8px 12px;

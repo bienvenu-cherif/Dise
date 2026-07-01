@@ -107,6 +107,37 @@ export class EmailDispatcherService implements OnModuleInit, OnModuleDestroy {
     return { success: true, skipped: false };
   }
 
+  async sendTestEmail(input: { recipientEmail: string; recipientName?: string }) {
+    if (!this.transporter) {
+      return {
+        success: false,
+        skipped: true,
+        reason: 'Transport SMTP non configure ou envoi desactive',
+      };
+    }
+
+    const recipient = input.recipientName
+      ? `"${input.recipientName}" <${input.recipientEmail}>`
+      : input.recipientEmail;
+    const from = this.configService.get<string>('SMTP_FROM') ?? this.configService.get<string>('SMTP_USER');
+
+    await this.transporter.sendMail({
+      from,
+      to: recipient,
+      subject: 'Test SMTP CotaDISE',
+      text: [
+        'Bonjour,',
+        '',
+        'Ceci est un email de test envoye depuis CotaDISE.',
+        'Si vous recevez ce message, la configuration SMTP est operationnelle.',
+        '',
+        `Date du test: ${new Date().toISOString()}`,
+      ].join('\n'),
+    });
+
+    return { success: true, skipped: false };
+  }
+
   private async sendEmail(email: EmailMessage) {
     const from = this.configService.get<string>('SMTP_FROM') ?? this.configService.get<string>('SMTP_USER');
     await this.transporter!.sendMail({

@@ -28,3 +28,15 @@ Si l'envoi est active et configure, le backend traite automatiquement les emails
 Le tresorier peut aussi declencher l'envoi avec:
 
 - `POST /api/emails/envoyer-en-attente`
+
+## Test reel
+
+Dans l'administration, onglet `Alertes`, bloc `Exploitation email`:
+
+1. Cliquer sur `Tester SMTP` pour verifier la connexion au serveur.
+2. Saisir une adresse dans `Email de test`.
+3. Cliquer sur `Envoyer un test reel`.
+4. Verifier que le message `Test SMTP CotaDISE` arrive dans la boite cible.
+
+Si le test de connexion passe mais que l'email n'arrive pas, verifier les dossiers spam,
+le domaine expediteur et les restrictions du fournisseur SMTP.

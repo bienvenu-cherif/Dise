@@ -463,6 +463,7 @@ function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
   const [pendingEmails, setPendingEmails] = useState<EmailMessage[]>([])
+  const [smtpTestEmail, setSmtpTestEmail] = useState('')
   const [studentNotifications, setStudentNotifications] = useState<StudentNotification[]>([])
   const [dons, setDons] = useState<DonAlumni[]>([])
   const [promotionsAlumni, setPromotionsAlumni] = useState<PromotionAlumni[]>([])
@@ -1706,6 +1707,24 @@ function App() {
       }
       if (result.failedCount > 0) {
         throw new Error(`${result.failedCount} email(s) en echec`)
+      }
+    })
+  }
+
+  const sendSmtpTestEmail = () => {
+    runAction('Email de test envoye', async () => {
+      if (!smtpTestEmail.trim()) {
+        throw new Error('Saisissez une adresse email de test')
+      }
+      const result = await request<{ success: boolean; skipped: boolean; reason?: string }>('/emails/envoyer-test', token, {
+        method: 'POST',
+        body: JSON.stringify({
+          recipientEmail: smtpTestEmail.trim(),
+          recipientName: 'Test CotaDISE',
+        }),
+      })
+      if (!result.success) {
+        throw new Error(result.reason || 'Email de test non envoye')
       }
     })
   }
@@ -3563,6 +3582,17 @@ function App() {
                   <div className="form-hint secure">
                     <strong>{emailStatus?.host ? `${emailStatus.host}:${emailStatus.port}` : 'Serveur SMTP non configure'}</strong>
                     <span>Expediteur: {emailStatus?.from ?? '-'} · Lot: {emailStatus?.batchSize ?? 0} · Intervalle: {emailStatus ? Math.round(emailStatus.intervalMs / 1000) : 0} secondes.</span>
+                  </div>
+                  <div className="inline-form">
+                    <label>Email de test
+                      <input
+                        value={smtpTestEmail}
+                        onChange={e => setSmtpTestEmail(e.target.value)}
+                        placeholder="votre.email@example.com"
+                        type="email"
+                      />
+                    </label>
+                    <button type="button" className="cta compact" onClick={sendSmtpTestEmail}>Envoyer un test reel</button>
                   </div>
                   <table>
                     <thead><tr><th>Destinataire</th><th>Sujet</th><th>Tentatives</th><th>Ajoute le</th></tr></thead>
