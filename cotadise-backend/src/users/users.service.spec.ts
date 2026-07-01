@@ -113,4 +113,45 @@ describe('UsersService - passation du bureau', () => {
     ).rejects.toThrow('Code d activation incorrect');
     expect(usersRepository.save).not.toHaveBeenCalled();
   });
+
+  it('active une invitation importee sans code manuel', async () => {
+    const invitedUser = {
+      id: 'invite-id',
+      email: 'invite@cotadise.local',
+      role: 'etudiant',
+      accountStatus: 'invite',
+      entrySource: 'import_officiel',
+      level: { id: 'ise2', name: 'ISE2' },
+      activationCodeHash: undefined,
+      activationCodeExpiresAt: undefined,
+    };
+    const builder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(invitedUser),
+    };
+    usersRepository.createQueryBuilder.mockReturnValue(builder);
+    usersRepository.findOne.mockResolvedValue(null);
+    usersRepository.save.mockImplementation(async (value: any) => ({ ...value }));
+
+    const result = await service.activateInvitedStudent('invite-id', {
+      email: 'student@example.com',
+      phone: '+221770000000',
+      wavePhone: '+221770000001',
+      password: 'Password123!',
+    });
+
+    expect(result.accountStatus).toBe('actif');
+    expect(result.email).toBe('student@example.com');
+    expect(result.wavePhone).toBe('+221770000001');
+    expect(result.activationCodeHash).toBeUndefined();
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'activation_invitation_autonome',
+        actorId: 'invite-id',
+        entityId: 'invite-id',
+      }),
+    );
+  });
 });

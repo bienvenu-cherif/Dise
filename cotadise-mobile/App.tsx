@@ -126,6 +126,7 @@ export default function App() {
   const [profileForm, setProfileForm] = useState({ email: '', phone: '', wavePhone: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [activationQuery, setActivationQuery] = useState('');
+  const [activationLevelId, setActivationLevelId] = useState('');
   const [invites, setInvites] = useState<InvitedStudent[]>([]);
   const [selectedInvite, setSelectedInvite] = useState<InvitedStudent | null>(null);
   const contentScrollRef = useRef<ScrollView | null>(null);
@@ -431,9 +432,11 @@ export default function App() {
     }
     setLoading(true);
     try {
-      const result = await request<InvitedStudent[]>(`/users/invites/recherche?q=${encodeURIComponent(activationQuery)}`);
+      const params = new URLSearchParams({ q: activationQuery.trim() });
+      if (activationLevelId) params.set('levelId', activationLevelId);
+      const result = await request<InvitedStudent[]>(`/users/invites/recherche?${params.toString()}`);
       setInvites(result);
-      setNotice(result.length ? '' : 'Aucun compte invite trouve.');
+      setNotice(result.length ? '' : 'Aucun compte disponible pour creation avec ce niveau et ce nom.');
     } catch (error: any) {
       setNotice(error.message || 'Recherche impossible');
     } finally {
@@ -459,7 +462,6 @@ export default function App() {
       await request(`/users/invites/${selectedInvite.id}/activer`, null, {
         method: 'POST',
         body: JSON.stringify({
-          activationCode: activationForm.activationCode.trim().toUpperCase(),
           email: activationForm.email,
           phone: activationForm.phone,
           wavePhone: activationForm.wavePhone || activationForm.phone,
@@ -470,7 +472,7 @@ export default function App() {
       setPassword(activationForm.password);
       setSelectedInvite(null);
       setInvites([]);
-      setNotice('Compte active. Vous pouvez vous connecter.');
+      setNotice('Compte cree. Vous pouvez vous connecter et commencer votre cotisation.');
     } catch (error: any) {
       setNotice(error.message || 'Activation impossible');
     } finally {
@@ -783,7 +785,25 @@ export default function App() {
 
             <View style={styles.authCard}>
               <Text style={styles.cardTitle}>Premiere connexion</Text>
-              <Text style={styles.mutedText}>Recherchez votre nom dans la liste officielle importee par le tresorier, puis completez vos contacts.</Text>
+              <Text style={styles.mutedText}>Choisissez votre niveau actuel, recherchez votre nom dans la liste officielle, puis completez vos contacts.</Text>
+              <View style={styles.levelSelector}>
+                {levelFilters.map((level) => {
+                  const active = activationLevelId === level.id || activationLevelId === level.name;
+                  return (
+                    <Pressable
+                      key={level.id}
+                      style={[styles.levelOption, active && styles.levelOptionActive]}
+                      onPress={() => {
+                        setActivationLevelId(active ? '' : level.id);
+                        setSelectedInvite(null);
+                        setInvites([]);
+                      }}
+                    >
+                      <Text style={[styles.levelOptionText, active && styles.levelOptionTextActive]}>{level.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <View style={styles.row}>
                 <TextInput style={[styles.input, styles.rowInput]} placeholder="Nom, prenom ou email" value={activationQuery} onChangeText={setActivationQuery} />
                 <Pressable style={styles.smallButton} onPress={searchInvites}>
@@ -798,21 +818,14 @@ export default function App() {
               ))}
               {selectedInvite && (
                 <View style={styles.activationBox}>
-                  <Text style={styles.cardTitle}>Activer {getFullName(selectedInvite)}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Code d activation remis par le tresorier"
-                    value={activationForm.activationCode}
-                    onChangeText={(value) => setActivationForm({ ...activationForm, activationCode: value.toUpperCase() })}
-                    autoCapitalize="characters"
-                    maxLength={12}
-                  />
+                  <Text style={styles.cardTitle}>Creer le compte de {getFullName(selectedInvite)}</Text>
+                  <Text style={styles.securityText}>Ce nom disparaitra de la liste apres creation du compte. Verifiez bien que vous avez choisi votre propre profil.</Text>
                   <TextInput style={styles.input} placeholder="Email valide" value={activationForm.email} onChangeText={(value) => setActivationForm({ ...activationForm, email: value })} autoCapitalize="none" />
                   <TextInput style={styles.input} placeholder="Telephone" value={activationForm.phone} onChangeText={(value) => setActivationForm({ ...activationForm, phone: value })} keyboardType="phone-pad" />
                   <TextInput style={styles.input} placeholder="Numero Wave" value={activationForm.wavePhone} onChangeText={(value) => setActivationForm({ ...activationForm, wavePhone: value })} keyboardType="phone-pad" />
                   <TextInput style={styles.input} placeholder="Mot de passe" value={activationForm.password} onChangeText={(value) => setActivationForm({ ...activationForm, password: value })} secureTextEntry />
                   <Pressable style={styles.primaryButton} onPress={activateInvite}>
-                    <Text style={styles.primaryButtonText}>Activer mon compte</Text>
+                    <Text style={styles.primaryButtonText}>Creer mon compte</Text>
                   </Pressable>
                 </View>
               )}

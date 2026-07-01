@@ -31,8 +31,8 @@ export class UsersController {
   }
 
   @Get('invites/recherche')
-  searchInvitedStudents(@Query('q') query = '') {
-    return this.usersService.searchInvitedStudents(query);
+  searchInvitedStudents(@Query('q') query = '', @Query('levelId') levelId = '') {
+    return this.usersService.searchInvitedStudents(query, levelId);
   }
 
   @Post('invites/:id/activer')

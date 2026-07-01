@@ -1,10 +1,10 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, MinLength } from 'class-validator';
 
 export class ActivateInvitedUserDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @Length(12, 12)
-  activationCode: string;
+  activationCode?: string;
 
   @IsNotEmpty()
   @IsEmail()

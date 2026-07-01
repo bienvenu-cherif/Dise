@@ -176,7 +176,7 @@ export class UsersService {
     return this.usersRepository.find({ order: { createdAt: 'DESC' } });
   }
 
-  searchInvitedStudents(query: string): Promise<User[]> {
+  searchInvitedStudents(query: string, levelIdOrName?: string): Promise<User[]> {
     const normalizedQuery = query?.trim();
     if (!normalizedQuery || normalizedQuery.length < 2) {
       throw new BadRequestException('Veuillez saisir au moins 2 caracteres pour rechercher votre nom');
@@ -194,6 +194,21 @@ export class UsersService {
       '(LOWER(user.firstName) LIKE :query OR LOWER(user.lastName) LIKE :query OR LOWER(user.email) LIKE :query)',
       { query: `%${normalizedQuery.toLowerCase()}%` },
     );
+
+    if (levelIdOrName) {
+      const normalizedLevelFilter = levelIdOrName.trim();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalizedLevelFilter);
+      if (isUuid) {
+        builder.andWhere('(level.id = :levelFilter OR UPPER(level.name) = :levelFilterName)', {
+          levelFilter: normalizedLevelFilter,
+          levelFilterName: normalizedLevelFilter.toUpperCase(),
+        });
+      } else {
+        builder.andWhere('UPPER(level.name) = :levelFilterName', {
+          levelFilterName: normalizedLevelFilter.toUpperCase(),
+        });
+      }
+    }
 
     return builder.getMany();
   }
@@ -270,12 +285,14 @@ export class UsersService {
     if (user.entrySource !== 'import_officiel') {
       throw new BadRequestException('Seuls les comptes issus de la liste officielle peuvent etre actives ici');
     }
-    if (!user.activationCodeHash || !user.activationCodeExpiresAt || user.activationCodeExpiresAt.getTime() < Date.now()) {
-      throw new BadRequestException('Code d activation absent ou expire. Contactez le tresorier');
-    }
-    const activationCodeValid = await bcrypt.compare(dto.activationCode.toUpperCase(), user.activationCodeHash);
-    if (!activationCodeValid) {
-      throw new BadRequestException('Code d activation incorrect');
+    if (dto.activationCode) {
+      if (!user.activationCodeHash || !user.activationCodeExpiresAt || user.activationCodeExpiresAt.getTime() < Date.now()) {
+        throw new BadRequestException('Code d activation absent ou expire. Contactez le tresorier');
+      }
+      const activationCodeValid = await bcrypt.compare(dto.activationCode.toUpperCase(), user.activationCodeHash);
+      if (!activationCodeValid) {
+        throw new BadRequestException('Code d activation incorrect');
+      }
     }
 
     const normalizedEmail = dto.email.toLowerCase();
@@ -296,6 +313,17 @@ export class UsersService {
     user.activationCodeExpiresAt = undefined;
 
     const saved = await this.usersRepository.save(user);
+    await this.auditService.record({
+      action: dto.activationCode ? 'activation_invitation_par_code' : 'activation_invitation_autonome',
+      entityType: 'users',
+      entityId: saved.id,
+      actorId: saved.id,
+      details: {
+        email: saved.email,
+        level: saved.level?.name,
+        entrySource: saved.entrySource,
+      },
+    });
     (saved as any).passwordHash = undefined;
     (saved as any).activationCodeHash = undefined;
     return saved;

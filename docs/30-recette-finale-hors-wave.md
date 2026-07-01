@@ -27,7 +27,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-public-recette.ps1
 1. Connexion admin/tresorier.
 2. Import de la liste officielle ISE1.
 3. Verification que les invites apparaissent dans `Etudiants`.
-4. Generation ou recuperation du code prive d'un etudiant.
+4. Verification qu'un etudiant invite peut encore apparaitre dans la creation mobile.
 5. Creation/ouverture de l'annee academique.
 6. Definition des montants ISE1, ISE2 et ISE3.
 7. Creation d'une exception individuelle de montant.
@@ -43,8 +43,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-public-recette.ps1
 
 ## Parcours etudiant a valider
 
-1. Recherche de son nom dans la liste officielle.
-2. Activation avec code prive, email, telephone, numero Wave et mot de passe.
+1. Choix du niveau actuel, puis recherche de son nom dans la liste officielle.
+2. Creation autonome du compte avec email, telephone, numero Wave et mot de passe.
 3. Connexion.
 4. Lecture de l'accueil: objectif, verse, reste, progression.
 5. Verification du rang compact sur l'accueil.

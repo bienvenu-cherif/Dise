@@ -54,23 +54,26 @@ Si un point est incomplet, la campagne n'est pas consideree prete pour les paiem
 
 ## Securite de la premiere activation
 
-L'import officiel reste limite aux colonnes `nom` et `prenom`. Le systeme genere ensuite un code d'activation individuel de 12 caracteres pour chaque invitation.
+L'import officiel reste limite aux colonnes `nom` et `prenom`. Pour reduire la friction,
+l'etudiant peut creer son compte sans attendre un code manuel du tresorier, mais seulement
+si son profil existe encore dans la liste officielle des invitations.
 
-- Le tresorier remet le code en prive a l'etudiant concerne.
-- Le code est stocke uniquement sous forme de hash.
-- Le code expire apres 120 jours.
-- Un code utilise est supprime lors de l'activation.
-- Le tresorier peut regenerer un code tant que le compte reste invite.
+- L'etudiant choisit son niveau actuel avant de rechercher son nom.
+- Seuls les comptes `invite` ou `profil_a_completer` issus de l'import officiel apparaissent.
+- Un compte deja cree ou deja active ne ressort plus dans la liste de creation.
+- L'etudiant doit renseigner un email, un telephone, un numero Wave et un mot de passe.
+- L'activation autonome est journalisee dans l'audit.
+- Le tresorier garde la possibilite de suspendre, corriger ou regenerer un code en cas de situation sensible.
 
-Connaitre le nom d'un etudiant ne suffit donc plus pour prendre possession de son compte.
-- Le cycle suivant pourra etre prepare en octobre.
+Cette approche evite qu'un etudiant motive quitte l'application faute de reponse rapide du
+tresorier, tout en gardant la liste officielle comme barriere d'entree.
 
 ## Activation des nouveaux ISE1
 
 1. Le tresorier importe le fichier officiel des ISE1.
 2. Le systeme cree des comptes en statut `invite`.
 3. Le nouvel ISE1 installe l'application mobile.
-4. Il recherche son nom dans la liste.
+4. Il choisit son niveau actuel et recherche son nom dans la liste.
 5. Il selectionne son profil.
 6. Il complete ses informations:
    - email valide;
